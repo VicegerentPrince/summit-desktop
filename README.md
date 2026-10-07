@@ -121,10 +121,13 @@ placeholder takes the glass colour.
 
 - **Liquid Glass** by Jack Faith ([jaxparrow07](https://github.com/jaxparrow07/liquidglass-kde-widgets)), GPL-3.0:
   the clock, calendar, weather and music widgets, and the glass effect that Vitals and Claude
-  Usage are drawn with. His widgets are also on the KDE Store. If you like the look, support him on
-  [Ko-fi](https://ko-fi.com/devrinth).
+  Usage are drawn with. His widgets are also on the [KDE Store](https://store.kde.org/u/jaxparrow07).
+  If you like the look, support him on [Ko-fi](https://ko-fi.com/devrinth).
+- **Inter Display** (bundled with the glass widgets, `widgets/common/fonts`) by The Inter Project
+  Authors (Rasmus Andersson), SIL Open Font License 1.1.
 - Wallpapers are not included; `wall` downloads them from [Wallhaven](https://wallhaven.cc), where
   each photo belongs to its author.
-- Breeze (the base of Summit Glass) by the KDE Visual Design Group.
+- Breeze (the base of Summit Glass) by the KDE Visual Design Group, LGPL; Summit Glass keeps that licence.
 
-This project is released under the GNU General Public License v3.0, see [LICENSE](LICENSE).
+This project is released under the GNU General Public License v3.0, see [LICENSE](LICENSE), except
+Summit Glass (LGPL, from Breeze) and the Inter fonts (OFL).
