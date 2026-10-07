@@ -1,0 +1,21 @@
+# fzf defaults (0.74): Summit colours, list on top, preview toggled with Ctrl+/.
+# Used by Ctrl+T, Alt+C, the Tab menu and anything else that calls fzf.
+--layout=reverse
+--height=60%
+--border=rounded
+--info=inline-right
+--prompt='❯ '
+--pointer='▌'
+--gutter=' '
+--marker='┃'
+--highlight-line
+--cycle
+--scrollbar='▐'
+--preview-window=border-left,noinfo
+--bind=ctrl-/:toggle-preview
+--bind=ctrl-u:preview-half-page-up,ctrl-d:preview-half-page-down
+--bind='ctrl-y:execute-silent(printf %s {+} | wl-copy)+abort'
+--color=fg:#c5cfd9,fg+:#f0f4f8,bg:-1,bg+:#28313d,hl:#4fd1c5:bold,hl+:#81e6d9:bold
+--color=info:#5c6773,border:#2a333f,prompt:#4fd1c5,pointer:#4fd1c5,marker:#84cc6a,spinner:#b9a3f5
+--color=header:#7cb7ff,label:#8693a1,separator:#2a333f,scrollbar:#434952,query:#dce3ea
+--color=preview-border:#2a333f,selected-bg:#223f44

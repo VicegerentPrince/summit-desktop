@@ -1,0 +1,13 @@
+{
+    "KPackageStructure": "Plasma/Applet",
+    "KPlugin": {
+        "Id": "summit.wallpapers",
+        "Name": "Wallpapers",
+        "Description": "A gallery of your wallpapers: click one to use it, scroll on the icon to cycle",
+        "Icon": "preferences-desktop-wallpaper",
+        "Category": "Miscellaneous",
+        "License": "GPL-3.0",
+        "Version": "1.0"
+    },
+    "X-Plasma-API-Minimum-Version": "6.0"
+}

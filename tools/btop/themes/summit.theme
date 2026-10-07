@@ -1,0 +1,93 @@
+# Summit · btop 1.4.7
+# Installs to ~/.config/btop/themes/summit.theme
+# All 48 keys of the theme format. Graph ramps run from a dark tint to the
+# full colour; load-type values (cpu, temperature, processes) run green or
+# blue through amber to red.
+
+# Main background. Only drawn when theme_background = true in btop.conf.
+theme[main_bg]="#171c23"
+
+# Main text
+theme[main_fg]="#dce3ea"
+
+# Box titles and labels
+theme[title]="#f0f4f8"
+
+# Keyboard shortcut letters
+theme[hi_fg]="#7cb7ff"
+
+# Selected row in the process list
+theme[selected_bg]="#28313d"
+theme[selected_fg]="#f0f4f8"
+
+# Inactive and disabled text
+theme[inactive_fg]="#5c6773"
+
+# Text drawn on top of graphs (uptime, current speeds)
+theme[graph_text]="#8693a1"
+
+# Unfilled part of the percentage meters
+theme[meter_bg]="#323d4b"
+
+# Process box extras: mini cpu graphs, detail graph and status text
+theme[proc_misc]="#7cb7ff"
+
+# Box outlines
+theme[cpu_box]="#434952"
+theme[mem_box]="#434952"
+theme[net_box]="#434952"
+theme[proc_box]="#434952"
+
+# Divider lines inside the boxes
+theme[div_line]="#2a333f"
+
+# Temperature: blue, amber, red
+theme[temp_start]="#7cb7ff"
+theme[temp_mid]="#e3b341"
+theme[temp_end]="#f47067"
+
+# CPU load: green, amber, red
+theme[cpu_start]="#84cc6a"
+theme[cpu_mid]="#e3b341"
+theme[cpu_end]="#f47067"
+
+# Memory and disk meters
+theme[free_start]="#2a4a34"
+theme[free_mid]="#84cc6a"
+theme[free_end]="#84cc6a"
+
+theme[cached_start]="#323d4b"
+theme[cached_mid]="#7cb7ff"
+theme[cached_end]="#7cb7ff"
+
+theme[available_start]="#323d4b"
+theme[available_mid]="#e3b341"
+theme[available_end]="#e3b341"
+
+theme[used_start]="#55302c"
+theme[used_mid]="#f47067"
+theme[used_end]="#f47067"
+
+# Network: download in teal, upload in purple
+theme[download_start]="#223f44"
+theme[download_mid]="#4fd1c5"
+theme[download_end]="#81e6d9"
+
+theme[upload_start]="#323d4b"
+theme[upload_mid]="#b9a3f5"
+theme[upload_end]="#b9a3f5"
+
+# Per-process cpu colour: same ramp as the CPU load
+theme[process_start]="#84cc6a"
+theme[process_mid]="#e3b341"
+theme[process_end]="#f47067"
+
+# Process list banners: paused, following, and the banner text
+theme[proc_pause_bg]="#e3b341"
+theme[proc_follow_bg]="#7cb7ff"
+theme[proc_banner_bg]="#b9a3f5"
+theme[proc_banner_fg]="#171c23"
+
+# Row of the process being followed
+theme[followed_bg]="#223f44"
+theme[followed_fg]="#81e6d9"

@@ -1,0 +1,39 @@
+// Summit · fastfetch 2.68.1
+// Installs to ~/.config/fastfetch/config.jsonc
+// Small Fedora logo in teal, a short list with teal keys, values in the
+// terminal's own text colour, one row of colour dots. No user@host banner.
+{
+  "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
+  "logo": {
+    "type": "small",
+    "color": { "1": "#4fd1c5" },
+    "padding": { "top": 1, "left": 2, "right": 3 }
+  },
+  "display": {
+    "separator": "  ",
+    "color": { "keys": "#4fd1c5", "separator": "#5c6773" },
+    "key": { "width": 9 },
+    // Percentages (memory, disk, battery) as a plain coloured number.
+    "percent": {
+      "type": ["num", "num-color"],
+      "color": { "green": "#84cc6a", "yellow": "#e3b341", "red": "#f47067" }
+    }
+  },
+  "modules": [
+    { "type": "os", "key": "os", "format": "{name} {version-id}" },
+    { "type": "kernel", "key": "kernel" },
+    { "type": "uptime", "key": "uptime" },
+    { "type": "packages", "key": "packages" },
+    { "type": "shell", "key": "shell" },
+    { "type": "terminal", "key": "terminal" },
+    { "type": "de", "key": "desktop" },
+    { "type": "wm", "key": "wm" },
+    { "type": "cpu", "key": "cpu" },
+    { "type": "gpu", "key": "gpu" },
+    { "type": "memory", "key": "memory" },
+    { "type": "disk", "key": "disk", "folders": "/" },
+    { "type": "battery", "key": "battery" },
+    "break",
+    { "type": "colors", "key": " ", "symbol": "circle" }
+  ]
+}

@@ -1,0 +1,21 @@
+[theme]
+name = "summit"
+
+# Summit colours for the Ctrl+R history panel. Command colours match the prompt's highlighting.
+[colors]
+Base = "#dce3ea"
+Title = "#4fd1c5"
+Important = "#f0f4f8"
+Guidance = "#5c6773"
+Muted = "#8693a1"
+Annotation = "#7cb7ff"
+AlertInfo = "#84cc6a"
+AlertWarn = "#e3b341"
+# atuin draws the selected row in AlertError, so this is the selection colour.
+AlertError = "#81e6d9"
+SyntaxCommand = "#4fd1c5"
+SyntaxFlag = "#e3b341"
+SyntaxString = "#84cc6a"
+SyntaxVariable = "#7cb7ff"
+SyntaxOperator = "#b9a3f5"
+SyntaxComment = "#5c6773"

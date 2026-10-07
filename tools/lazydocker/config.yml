@@ -1,0 +1,11 @@
+# Summit · lazydocker 0.25.2
+# Installs to ~/.config/lazydocker/config.yml
+# lazydocker has four theme keys; they match the lazygit theme.
+
+gui:
+  border: rounded
+  theme:
+    activeBorderColor: ['#4fd1c5', bold]    # teal
+    inactiveBorderColor: ['#5c6773']        # dim
+    selectedLineBgColor: ['#28313d']        # raised / selection row
+    optionsTextColor: ['#7cb7ff']           # blue

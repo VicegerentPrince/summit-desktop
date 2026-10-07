@@ -1,0 +1,26 @@
+{
+    // Summit look: same colours and fonts as the desktop and the terminal.
+    "workbench.colorTheme": "Summit",
+
+    "editor.fontFamily": "'JetBrains Mono', monospace",
+    "editor.fontLigatures": true,
+    "editor.cursorBlinking": "smooth",
+    "editor.cursorSmoothCaretAnimation": "on",
+    "editor.smoothScrolling": true,
+    "editor.guides.bracketPairs": "active",
+    "workbench.list.smoothScrolling": true,
+
+    // Integrated terminal: the same zsh setup as kitty, with prompt icons.
+    "terminal.integrated.defaultProfile.linux": "zsh",
+    "terminal.integrated.fontFamily": "'JetBrainsMono Nerd Font', 'JetBrains Mono', monospace",
+    "terminal.integrated.fontLigatures.enabled": true,
+    "terminal.integrated.cursorStyle": "line",
+    "terminal.integrated.smoothScrolling": true,
+    "terminal.integrated.minimumContrastRatio": 1,
+
+    // The desktop's own title bar (matches every other window, and avoids the lost first
+    // keystroke after Alt+Tab that the custom title bar has on KDE Wayland). Alt shows the menu.
+    "window.titleBarStyle": "native",
+    "window.customTitleBarVisibility": "never",
+    "window.menuBarVisibility": "toggle"
+}

@@ -1,0 +1,316 @@
+# Summit · eza 0.23.5
+# Installs to ~/.config/eza/theme.yml
+#
+# Three things to know about how eza reads this file:
+#  - Each entry is laid over eza's built-in style for that key, so an
+#    attribute the built-in style carries (bold, underline, a background)
+#    stays unless it is switched off here. That is what the `is_bold: false`
+#    and `background: "Default"` entries are for.
+#  - A YAML mistake anywhere makes eza drop the whole file without a message
+#    and fall back to its built-in colours.
+#  - LS_COLORS (and EZA_COLORS) are applied on top of it: `di`, `ex`, `ln` and
+#    the other file kinds from LS_COLORS replace `filekinds` below, and its
+#    `*.ext` patterns replace `file_type`. Only `filenames` and `extensions`
+#    here always win. Fedora's zsh sets LS_COLORS by default, so the Summit
+#    LS_COLORS has to be exported for the file kinds to match.
+
+colourful: true
+
+filekinds:
+  normal:       {foreground: "#dce3ea"}
+  directory:    {foreground: "#4fd1c5", is_bold: true}
+  symlink:      {foreground: "#81e6d9"}
+  pipe:         {foreground: "#e3b341"}
+  block_device: {foreground: "#e3b341", is_bold: false}
+  char_device:  {foreground: "#e3b341", is_bold: false}
+  socket:       {foreground: "#e3b341", is_bold: false}
+  special:      {foreground: "#e3b341"}
+  executable:   {foreground: "#84cc6a", is_bold: true}
+  mount_point:  {foreground: "#4fd1c5", is_bold: true, is_underline: true}
+
+# Owner bits in full colour, group and other bits in the same hues but faint.
+perms:
+  user_read:          {foreground: "#e3b341", is_bold: false}
+  user_write:         {foreground: "#f47067", is_bold: false}
+  user_execute_file:  {foreground: "#84cc6a", is_bold: true, is_underline: false}
+  user_execute_other: {foreground: "#84cc6a", is_bold: false}
+  group_read:         {foreground: "#e3b341", is_dimmed: true}
+  group_write:        {foreground: "#f47067", is_dimmed: true}
+  group_execute:      {foreground: "#84cc6a", is_dimmed: true}
+  other_read:         {foreground: "#e3b341", is_dimmed: true}
+  other_write:        {foreground: "#f47067", is_dimmed: true}
+  other_execute:      {foreground: "#84cc6a", is_dimmed: true}
+  special_user_file:  {foreground: "#b9a3f5"}
+  special_other:      {foreground: "#b9a3f5"}
+  attribute:          {foreground: "#5c6773"}
+
+# Sizes step up quietly: muted bytes, plain text for K, blue for M, amber for
+# G, red only from T upwards. Units take the colour of their number.
+size:
+  major:       {foreground: "#8693a1", is_bold: false}
+  minor:       {foreground: "#8693a1"}
+  number_byte: {foreground: "#8693a1"}
+  number_kilo: {foreground: "#dce3ea", is_bold: false}
+  number_mega: {foreground: "#7cb7ff"}
+  number_giga: {foreground: "#e3b341"}
+  number_huge: {foreground: "#f47067"}
+  unit_byte:   {foreground: "#8693a1"}
+  unit_kilo:   {foreground: "#dce3ea", is_bold: false}
+  unit_mega:   {foreground: "#7cb7ff"}
+  unit_giga:   {foreground: "#e3b341"}
+  unit_huge:   {foreground: "#f47067"}
+
+# Your own name is on almost every line, so it is muted; root and other
+# owners are the ones that stand out.
+users:
+  user_you:    {foreground: "#8693a1", is_bold: false}
+  user_root:   {foreground: "#e3b341"}
+  user_other:  {foreground: "#7cb7ff"}
+  group_yours: {foreground: "#8693a1", is_bold: false}
+  group_root:  {foreground: "#e3b341"}
+  group_other: {foreground: "#7cb7ff"}
+
+links:
+  normal:          {foreground: "#8693a1", is_bold: false}
+  multi_link_file: {foreground: "#e3b341", background: "Default"}
+
+git:
+  new:        {foreground: "#84cc6a"}
+  modified:   {foreground: "#e3b341"}
+  deleted:    {foreground: "#f47067"}
+  renamed:    {foreground: "#7cb7ff"}
+  typechange: {foreground: "#b9a3f5"}
+  ignored:    {foreground: "#5c6773", is_dimmed: false}
+  conflicted: {foreground: "#f47067", is_bold: true}
+
+git_repo:
+  branch_main:  {foreground: "#84cc6a"}
+  branch_other: {foreground: "#7cb7ff"}
+  git_clean:    {foreground: "#84cc6a"}
+  git_dirty:    {foreground: "#e3b341", is_bold: false}
+
+# `eza -Z`. 0.23.5 wants this nesting (none, then selinux with five parts);
+# the flat form in the published default theme is ignored.
+security_context:
+  none: {foreground: "#5c6773"}
+  selinux:
+    colon: {foreground: "#5c6773", is_dimmed: false}
+    user:  {foreground: "#8693a1"}
+    role:  {foreground: "#8693a1"}
+    typ:   {foreground: "#7cb7ff"}
+    range: {foreground: "#5c6773"}
+
+# eza's own content classes, used when neither LS_COLORS nor the lists at the
+# end of this file name the file.
+file_type:
+  image:      {foreground: "#b9a3f5"}
+  video:      {foreground: "#b9a3f5", is_bold: false}
+  music:      {foreground: "#b9a3f5"}
+  lossless:   {foreground: "#b9a3f5", is_bold: false}
+  crypto:     {foreground: "#e3b341", is_bold: false}
+  document:   {foreground: "#7cb7ff"}
+  compressed: {foreground: "#f47067"}
+  temp:       {foreground: "#5c6773", is_dimmed: false}
+  compiled:   {foreground: "#5c6773"}
+  build:      {foreground: "#dce3ea", is_bold: false, is_underline: false}
+  source:     {foreground: "#dce3ea", is_bold: false}
+
+punctuation:  {foreground: "#5c6773", is_bold: false}
+date:         {foreground: "#8693a1"}
+inode:        {foreground: "#5c6773"}
+blocks:       {foreground: "#5c6773"}
+header:       {foreground: "#7cb7ff", is_underline: true}
+octal:        {foreground: "#8693a1"}
+flags:        {foreground: "#5c6773"}
+
+symlink_path:        {foreground: "#8693a1"}
+control_char:        {foreground: "#f47067"}
+broken_symlink:      {foreground: "#f47067"}
+broken_path_overlay: {is_underline: true}
+
+# Names and extensions. These win over LS_COLORS, so the groups look the same
+# with or without it. Source code is not listed: it takes `file_type.source`.
+filenames:
+  README:            &doc    {filename: {foreground: "#7cb7ff"}}
+  LICENSE:           *doc
+  LICENCE:           *doc
+  COPYING:           *doc
+  CHANGELOG:         *doc
+  AUTHORS:           *doc
+  CONTRIBUTING:      *doc
+  NOTICE:            *doc
+  TODO:              *doc
+  .gitignore:        &config {filename: {foreground: "#e3b341", is_dimmed: true}}
+  .gitattributes:    *config
+  .gitmodules:       *config
+  .gitconfig:        *config
+  .editorconfig:     *config
+  .env:              *config
+  .npmrc:            *config
+  .dockerignore:     *config
+  .ignore:           *config
+  package-lock.json: &quiet  {filename: {foreground: "#5c6773"}}
+  pnpm-lock.yaml:    *quiet
+  go.sum:            *quiet
+
+extensions:
+  # Configuration: amber, faint
+  json: *config
+  jsonc: *config
+  json5: *config
+  yaml: *config
+  yml: *config
+  toml: *config
+  ini: *config
+  cfg: *config
+  conf: *config
+  config: *config
+  env: *config
+  xml: *config
+  plist: *config
+  properties: *config
+  desktop: *config
+  service: *config
+  # Documents: blue
+  md: *doc
+  markdown: *doc
+  mdx: *doc
+  rst: *doc
+  txt: *doc
+  org: *doc
+  adoc: *doc
+  tex: *doc
+  pdf: *doc
+  epub: *doc
+  djvu: *doc
+  rtf: *doc
+  doc: *doc
+  docx: *doc
+  odt: *doc
+  xls: *doc
+  xlsx: *doc
+  ods: *doc
+  csv: *doc
+  tsv: *doc
+  ppt: *doc
+  pptx: *doc
+  odp: *doc
+  # Images, video, audio: purple
+  png: &media {filename: {foreground: "#b9a3f5"}}
+  jpg: *media
+  jpeg: *media
+  jfif: *media
+  gif: *media
+  bmp: *media
+  tif: *media
+  tiff: *media
+  webp: *media
+  avif: *media
+  heic: *media
+  heif: *media
+  jxl: *media
+  ico: *media
+  icns: *media
+  svg: *media
+  svgz: *media
+  eps: *media
+  psd: *media
+  xcf: *media
+  kra: *media
+  raw: *media
+  cr2: *media
+  cr3: *media
+  nef: *media
+  dng: *media
+  arw: *media
+  orf: *media
+  rw2: *media
+  mp4: *media
+  m4v: *media
+  mkv: *media
+  webm: *media
+  mov: *media
+  avi: *media
+  wmv: *media
+  flv: *media
+  mpg: *media
+  mpeg: *media
+  ogv: *media
+  3gp: *media
+  vob: *media
+  m2ts: *media
+  mts: *media
+  mp3: *media
+  flac: *media
+  wav: *media
+  ogg: *media
+  oga: *media
+  opus: *media
+  m4a: *media
+  aac: *media
+  wma: *media
+  aiff: *media
+  aif: *media
+  mid: *media
+  midi: *media
+  mka: *media
+  ape: *media
+  wv: *media
+  # Archives and packages: red
+  tar: &archive {filename: {foreground: "#f47067"}}
+  tgz: *archive
+  tbz: *archive
+  tbz2: *archive
+  txz: *archive
+  tzst: *archive
+  gz: *archive
+  bz2: *archive
+  xz: *archive
+  zst: *archive
+  lz: *archive
+  lz4: *archive
+  lzma: *archive
+  lzo: *archive
+  z: *archive
+  zip: *archive
+  7z: *archive
+  rar: *archive
+  jar: *archive
+  war: *archive
+  cab: *archive
+  cpio: *archive
+  arj: *archive
+  rpm: *archive
+  deb: *archive
+  apk: *archive
+  pkg: *archive
+  dmg: *archive
+  iso: *archive
+  img: *archive
+  qcow2: *archive
+  vdi: *archive
+  vmdk: *archive
+  appimage: *archive
+  flatpak: *archive
+  snap: *archive
+  whl: *archive
+  crate: *archive
+  gem: *archive
+  # Temporary, backup, lock and build leftovers: dim
+  tmp: *quiet
+  temp: *quiet
+  bak: *quiet
+  old: *quiet
+  orig: *quiet
+  rej: *quiet
+  swp: *quiet
+  swo: *quiet
+  part: *quiet
+  lock: *quiet
+  lockb: *quiet
+  pid: *quiet
+  log: *quiet
+  cache: *quiet
+  o: *quiet
+  pyc: *quiet
+  class: *quiet

@@ -1,0 +1,68 @@
+# Summit · nano 8.7.1
+# Installs to ~/.config/nano/nanorc
+
+# Syntax highlighting. Fedora's /etc/nanorc already pulls these in; repeating
+# the line is harmless and keeps this file complete on its own.
+include "/usr/share/nano/*.nanorc"
+
+# ── Editing ─────────────────────────────────────────────────────────────────
+set autoindent
+set tabsize 4
+set tabstospaces
+set smarthome
+set softwrap
+set atblanks
+
+# ── Screen ──────────────────────────────────────────────────────────────────
+set linenumbers
+# One bar at the bottom (name, state, position) instead of the title bar; it
+# is the cleaner of the two and already carries the state flags.
+set minibar
+# Line, column and character code always visible in that bar.
+set constantshow
+# Thin position marker on the right edge.
+set indicator
+
+# ── Colours ─────────────────────────────────────────────────────────────────
+# nano has no true colour. "#rgb" is three digits and nano maps it to the
+# nearest of the terminal's 256 colours, so each value below is the closest
+# match nano can show for the Summit colour named beside it.
+# bright on raised (title bar, only shown without minibar)
+set titlecolor bold,#eee,#444
+# text on panel (the bar at the bottom)
+set minicolor #ddd,#333
+# teal on panel (the prompt)
+set promptcolor #5cc,#333
+# blue on panel (messages)
+set statuscolor #8bf,#333
+# base on red
+set errorcolor bold,#222,#e76
+# base on teal (the search match being offered)
+set spotlightcolor #222,#5cc
+# bright on the selection background
+set selectedcolor #eee,#555
+# dim on panel (position marker)
+set scrollercolor #888,#333
+# dim (line numbers)
+set numbercolor #888
+# blue (shortcut keys in the help lines), muted (what they do)
+set keycolor #8bf
+set functioncolor #89a
+
+# ── Keys ────────────────────────────────────────────────────────────────────
+# Added on top of nano's own keys, so everything you already know still works:
+# Ctrl+O write, Ctrl+X exit, Ctrl+K cut a line, Ctrl+U paste it, Ctrl+W search.
+# Ctrl+C and Ctrl+V are free because kitty keeps its own copy and paste on
+# Ctrl+Shift+C / Ctrl+Shift+V; inside a prompt Ctrl+C still cancels. They work
+# on nano's own buffer, not on the system clipboard; use the kitty keys for that.
+bind ^S savefile main
+bind ^Q exit all
+bind ^F whereis all
+bind ^Z undo main
+bind ^Y redo main
+bind ^C copy main
+bind ^V paste all
+# Keys that changed job: Ctrl+Z was suspend (now Ctrl+T then Ctrl+Z); Ctrl+Y and
+# Ctrl+V were page up and down (use PgUp and PgDn); Ctrl+Q was search backwards
+# (Alt+Q repeats a search backwards); Ctrl+C showed the cursor position (the
+# bar at the bottom always shows it).

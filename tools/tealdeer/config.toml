@@ -1,0 +1,35 @@
+# Summit · tealdeer 1.9.0 (the `tldr` command)
+# Installs to ~/.config/tealdeer/config.toml
+# 1.9.0 refuses to start on a key it does not know, so only keys from its own
+# seed config are used. Colours have to be rgb tables; hex strings are not
+# accepted.
+
+# Page description: text
+[style.description]
+foreground = { rgb = { r = 220, g = 227, b = 234 } }
+
+# What each example does: muted, so the command lines stand out
+[style.example_text]
+foreground = { rgb = { r = 134, g = 147, b = 161 } }
+
+# The command line itself: bright
+[style.example_code]
+foreground = { rgb = { r = 240, g = 244, b = 248 } }
+
+# The command's own name inside those lines: blue
+[style.command_name]
+foreground = { rgb = { r = 124, g = 183, b = 255 } }
+bold = true
+
+# Placeholders to replace: amber
+[style.example_variable]
+foreground = { rgb = { r = 227, g = 179, b = 65 } }
+italic = true
+
+[display]
+compact = true
+
+# Pages are refreshed by the `update` command (tldr --update), never in the
+# middle of a lookup, so `tldr something` always answers at once.
+[updates]
+auto_update = false

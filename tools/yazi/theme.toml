@@ -1,0 +1,188 @@
+# Summit · yazi 26.9.1
+# Installs to ~/.config/yazi/theme.toml
+# Section and key names are the 26.9.1 ones: [mgr] (was [manager]), [tabs],
+# [mode], [indicator], `url` in rules (was `name`), `chord`/`action` in [help].
+#
+# The background is left alone so the terminal's own (translucent) background
+# shows through.
+
+[mgr]
+cwd = { fg = "#7cb7ff" }
+
+# Find: the matched part of a name, and the "[2/7]" counter next to it.
+find_keyword  = { fg = "#4fd1c5", bold = true }
+find_position = { fg = "#8693a1", bg = "reset", italic = true }
+
+symlink_target = { fg = "#5c6773", italic = true }
+
+# Bar at the left edge of a row. Selected green, copied blue, cut red; teal
+# only while a visual selection is being drawn.
+marker_copied   = { fg = "#7cb7ff", bg = "#7cb7ff" }
+marker_cut      = { fg = "#f47067", bg = "#f47067" }
+marker_marked   = { fg = "#4fd1c5", bg = "#4fd1c5" }
+marker_selected = { fg = "#84cc6a", bg = "#84cc6a" }
+
+# Counters in the header, same meaning as the markers.
+count_copied   = { fg = "#171c23", bg = "#7cb7ff" }
+count_cut      = { fg = "#171c23", bg = "#f47067" }
+count_selected = { fg = "#171c23", bg = "#84cc6a" }
+
+border_symbol = "│"
+border_style  = { fg = "#2a333f" }
+
+# Code previews use the same theme file as bat and delta.
+syntect_theme = "~/.config/bat/themes/Summit.tmTheme"
+
+[tabs]
+active   = { fg = "#f0f4f8", bg = "#28313d", bold = true }
+inactive = { fg = "#8693a1", bg = "#1d232c" }
+
+# Status bar ends. Normal mode stays quiet; the accent appears only while
+# selecting, red while unselecting.
+[mode]
+normal_main = { fg = "#f0f4f8", bg = "#323d4b", bold = true }
+normal_alt  = { fg = "#8693a1", bg = "#28313d" }
+select_main = { fg = "#171c23", bg = "#4fd1c5", bold = true }
+select_alt  = { fg = "#4fd1c5", bg = "#28313d" }
+unset_main  = { fg = "#171c23", bg = "#f47067", bold = true }
+unset_alt   = { fg = "#f47067", bg = "#28313d" }
+
+# Row under the cursor: the selection-row background, file colour kept.
+[indicator]
+parent  = { bg = "#1d232c", bold = true }
+current = { bg = "#28313d", bold = true }
+preview = { bg = "#1d232c" }
+
+[status]
+perm_type  = { fg = "#7cb7ff" }
+perm_read  = { fg = "#e3b341" }
+perm_write = { fg = "#f47067" }
+perm_exec  = { fg = "#84cc6a" }
+perm_sep   = { fg = "#5c6773" }
+progress_label  = { fg = "#f0f4f8", bold = true }
+progress_normal = { fg = "#7cb7ff", bg = "#28313d" }
+progress_error  = { fg = "#f47067", bg = "#28313d" }
+
+# Key hints: the key in blue, what is still to type dim, the action as text.
+[which]
+border          = { fg = "#434952" }
+cand            = { fg = "#7cb7ff", bold = true }
+rest            = { fg = "#5c6773" }
+desc            = { fg = "#dce3ea" }
+separator_style = { fg = "#5c6773" }
+
+# Dialogs take the keyboard, so they get the active (teal) border.
+[confirm]
+border  = { fg = "#4fd1c5" }
+title   = { fg = "#7cb7ff", bold = true }
+body    = { fg = "#dce3ea" }
+list    = { fg = "#dce3ea" }
+btn_yes = { fg = "#171c23", bg = "#4fd1c5", bold = true }
+btn_no  = { fg = "#8693a1" }
+
+[spot]
+border   = { fg = "#4fd1c5" }
+title    = { fg = "#7cb7ff", bold = true }
+tbl_col  = { fg = "#7cb7ff" }
+tbl_cell = { fg = "#f0f4f8", bg = "#28313d" }
+
+[notify]
+title_info  = { fg = "#7cb7ff" }
+title_warn  = { fg = "#e3b341" }
+title_error = { fg = "#f47067" }
+
+[pick]
+border   = { fg = "#4fd1c5" }
+active   = { fg = "#f0f4f8", bg = "#28313d", bold = true }
+inactive = { fg = "#dce3ea" }
+
+[input]
+border   = { fg = "#4fd1c5" }
+title    = { fg = "#7cb7ff" }
+value    = { fg = "#dce3ea" }
+selected = { bg = "#223f44" }
+
+[cmp]
+border   = { fg = "#434952" }
+active   = { fg = "#f0f4f8", bg = "#28313d", bold = true }
+inactive = { fg = "#8693a1" }
+
+[tasks]
+border  = { fg = "#4fd1c5" }
+title   = { fg = "#7cb7ff" }
+hovered = { fg = "#f0f4f8", bg = "#28313d", bold = true }
+
+[help]
+border  = { fg = "#4fd1c5" }
+chord   = { fg = "#7cb7ff" }
+action  = { fg = "#dce3ea" }
+hovered = { bg = "#28313d", bold = true }
+
+# File colours, same roles as LS_COLORS and eza. The first matching rule wins,
+# so file kinds come before content types, as in ls.
+# A `url` glob is matched against the whole path: it has to start with `*`
+# (any suffix) or `**/` (an exact name). A bare name never matches.
+[filetype]
+rules = [
+	# Kinds
+	{ url = "*", is = "orphan", fg = "#f47067" },
+	{ url = "*",  is = "link",  fg = "#81e6d9" },
+	{ url = "*/", is = "link",  fg = "#81e6d9", bold = true },
+	{ url = "*", is = "block",  fg = "#e3b341" },
+	{ url = "*", is = "char",   fg = "#e3b341" },
+	{ url = "*", is = "fifo",   fg = "#e3b341" },
+	{ url = "*", is = "sock",   fg = "#e3b341" },
+	{ url = "*/", is = "dummy", fg = "#f47067" },
+	{ url = "*",  is = "dummy", fg = "#f47067" },
+	{ mime = "vfs/{absent,stale}", fg = "#5c6773" },
+	# Directories
+	{ url = "*/", fg = "#4fd1c5", bold = true },
+	# Executables
+	{ url = "*", is = "exec", fg = "#84cc6a", bold = true },
+	# Images, video, audio. By content type once yazi has probed the file, by
+	# extension before that (rows in the preview column are not probed).
+	{ mime = "**/image/*", fg = "#b9a3f5" },
+	{ mime = "**/{audio,video}/*", fg = "#b9a3f5" },
+	{ url = "*.{png,jpg,jpeg,jfif,gif,bmp,tif,tiff,webp,avif,heic,heif,jxl,ico,icns,svg,svgz,eps,psd,xcf,kra,raw,cr2,cr3,nef,dng,arw,orf,rw2}", fg = "#b9a3f5" },
+	{ url = "*.{mp4,m4v,mkv,webm,mov,avi,wmv,flv,mpg,mpeg,ogv,3gp,vob,m2ts,mts}", fg = "#b9a3f5" },
+	{ url = "*.{mp3,flac,wav,ogg,oga,opus,m4a,aac,wma,aiff,aif,mid,midi,mka,ape,wv}", fg = "#b9a3f5" },
+	# Archives and packages
+	{ mime = "**/application/{zip,rar,7z*,tar,gzip,xz,zstd,bzip*,lzma,compress,archive,cpio,arj,xar,ms-cab*}", fg = "#f47067" },
+	{ url = "*.{tar,tgz,tbz,tbz2,txz,tzst,gz,bz2,xz,zst,lz,lz4,lzma,lzo,z,zip,7z,rar,jar,war,cab,cpio,arj,rpm,deb,apk,pkg,dmg,iso,img,qcow2,vdi,vmdk,appimage,flatpak,snap,whl,crate,gem}", fg = "#f47067" },
+	# Documents
+	{ mime = "**/application/{pdf,doc,rtf}", fg = "#7cb7ff" },
+	{ url = "*.{md,markdown,mdx,rst,txt,org,adoc,tex,pdf,epub,djvu,rtf,doc,docx,odt,xls,xlsx,ods,csv,tsv,ppt,pptx,odp}", fg = "#7cb7ff" },
+	{ url = "**/{README,LICENSE,LICENCE,COPYING,CHANGELOG,AUTHORS,CONTRIBUTING,NOTICE,TODO}", fg = "#7cb7ff" },
+	# Temporary, backup, lock and build leftovers
+	{ url = "*.{tmp,temp,bak,old,orig,rej,swp,swo,part,lock,lockb,pid,log,cache,o,pyc,class}", fg = "#5c6773" },
+	{ url = "**/{package-lock.json,pnpm-lock.yaml,go.sum}", fg = "#5c6773" },
+	{ url = "*~", fg = "#5c6773" },
+	# Configuration
+	{ url = "*.{json,jsonc,json5,yaml,yml,toml,ini,cfg,conf,config,env,xml,plist,properties,desktop,service}", fg = "#e3b341", dim = true },
+	{ url = "**/.{gitignore,gitattributes,gitmodules,gitconfig,editorconfig,env,npmrc,dockerignore,ignore}", fg = "#e3b341", dim = true },
+]
+
+# Folder glyphs in the teal of the folder names. yazi draws them in a bright Material blue
+# by default; the glyphs themselves are its own, only the colour is changed. File glyphs keep
+# their per-language colours.
+[icon]
+dirs = [
+	{ name = ".config", text = "", fg = "#4fd1c5" },
+	{ name = ".git", text = "", fg = "#4fd1c5" },
+	{ name = ".github", text = "", fg = "#4fd1c5" },
+	{ name = ".npm", text = "", fg = "#4fd1c5" },
+	{ name = "Desktop", text = "", fg = "#4fd1c5" },
+	{ name = "Development", text = "", fg = "#4fd1c5" },
+	{ name = "Documents", text = "", fg = "#4fd1c5" },
+	{ name = "Downloads", text = "", fg = "#4fd1c5" },
+	{ name = "Library", text = "", fg = "#4fd1c5" },
+	{ name = "Movies", text = "", fg = "#4fd1c5" },
+	{ name = "Music", text = "", fg = "#4fd1c5" },
+	{ name = "Pictures", text = "", fg = "#4fd1c5" },
+	{ name = "Public", text = "", fg = "#4fd1c5" },
+	{ name = "Videos", text = "", fg = "#4fd1c5" },
+]
+prepend_conds = [
+	{ if = "dir & hovered", text = "", fg = "#4fd1c5" },
+	{ if = "dir", text = "", fg = "#4fd1c5" },
+]

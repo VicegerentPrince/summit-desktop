@@ -1,0 +1,29 @@
+{
+  "name": "summit-theme",
+  "displayName": "Summit",
+  "description": "Dark slate theme with a glacier-teal accent, matched to the Summit desktop colour scheme.",
+  "version": "1.0.0",
+  "publisher": "summit",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Themes"
+  ],
+  "keywords": [
+    "theme",
+    "dark",
+    "summit",
+    "slate",
+    "teal"
+  ],
+  "contributes": {
+    "themes": [
+      {
+        "label": "Summit",
+        "uiTheme": "vs-dark",
+        "path": "./themes/summit-color-theme.json"
+      }
+    ]
+  }
+}

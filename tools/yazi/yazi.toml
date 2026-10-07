@@ -1,0 +1,13 @@
+# Summit · yazi 26.9.1
+# Installs to ~/.config/yazi/yazi.toml
+# Only the keys listed here are changed; yazi merges them over its defaults.
+# The section is [mgr] (the old [manager] name is gone).
+
+[mgr]
+sort_by        = "natural"   # file2 before file10
+sort_dir_first = true
+linemode       = "size"
+show_hidden    = false       # toggle with "." while browsing
+
+# Image previews: nothing is set on purpose. yazi detects kitty's graphics
+# protocol by itself, also through tmux (allow-passthrough is on in tmux.conf).

@@ -1,0 +1,477 @@
+#!/usr/bin/env python3
+"""wall: the wallpaper library behind the Wallpapers panel widget.
+
+    wall next | prev | random        switch wallpaper (desktop and lock screen)
+    wall set FILE                    use this image
+    wall current                     print the current image
+    wall list                        list the library
+    wall fetch [-n N] [WORDS...]     download N more top-rated photographs from Wallhaven
+                                     (default 6; WORDS narrow the search, e.g. "wall fetch -n 8 aurora")
+    wall add [--use] ID [ID...]      download specific Wallhaven images by id (--use: switch to the last one)
+    wall thumbs                      rebuild the gallery thumbnails
+    wall card [FILE]                 redraw the small picture used by the terminal's welcome card
+    wall accent [FILE]               take the accent colour from the wallpaper (Plasma and kitty)
+    wall size                        print the resolution downloads are sized for
+
+The library is ~/Pictures/Wallpapers: drop any image in there and it shows up in the gallery.
+
+Resolution: only images at least as large as your largest connected screen are requested, and
+never less than 4K, so the library stays sharp when you plug in a bigger monitor. Anything larger
+than that is scaled down to it on arrival, to keep files and memory reasonable.
+Only safe-for-work results from Wallhaven's "General" category are requested. `wall fetch` also
+skips pictures that are bright behind the desktop widgets, so the glass cards stay readable.
+"""
+import json, os, random, subprocess, sys, time, urllib.parse, urllib.request
+
+HOME = os.path.expanduser("~")
+LIB = os.path.join(HOME, "Pictures", "Wallpapers")
+THUMBS = os.path.join(os.environ.get("XDG_CACHE_HOME", os.path.join(HOME, ".cache")), "summit", "wallpapers")
+CARD = os.path.join(os.path.dirname(THUMBS), "welcome.png")
+STATE = os.path.join(os.environ.get("XDG_STATE_HOME", os.path.join(HOME, ".local", "state")), "summit", "wallpaper")
+EXTS = (".jpg", ".jpeg", ".png", ".webp", ".avif")
+API = "https://wallhaven.cc/api/v1"
+UA = {"User-Agent": "wall/1.0 (personal wallpaper library)"}
+DEFAULT_QUERIES = ["mountains photography", "landscape night stars", "lake reflection mountains", "fog forest",
+                   "aurora", "snow peak", "minimal landscape"]
+
+
+def target_size():
+    """Largest connected screen, but at least 4K. Asked from KScreen; falls back to 4K."""
+    w, h = 3840, 2160
+    try:
+        out = subprocess.run(["kscreen-doctor", "-j"], capture_output=True, text=True, timeout=5).stdout
+        for o in json.loads(out).get("outputs", []):
+            if not (o.get("connected") and o.get("enabled")):
+                continue
+            mode = next((m for m in o.get("modes", []) if m.get("id") == o.get("currentModeId")), None)
+            if mode:
+                mw, mh = int(mode["size"]["width"]), int(mode["size"]["height"])
+                if mw * mh > w * h:
+                    w, h = mw, mh
+    except Exception:
+        pass
+    return w, h
+
+
+def library():
+    os.makedirs(LIB, exist_ok=True)
+    return sorted(os.path.join(LIB, f) for f in os.listdir(LIB) if f.lower().endswith(EXTS) and not f.startswith("."))
+
+
+def current():
+    try:
+        p = open(STATE).read().strip()
+        return p if os.path.exists(p) else ""
+    except OSError:
+        return ""
+
+
+def thumb_path(path):
+    return os.path.join(THUMBS, os.path.splitext(os.path.basename(path))[0] + ".jpg")
+
+
+def make_thumb(path, force=False):
+    out = thumb_path(path)
+    if not force and os.path.exists(out) and os.path.getmtime(out) >= os.path.getmtime(path):
+        return out
+    from PIL import Image, ImageOps
+    os.makedirs(THUMBS, exist_ok=True)
+    with Image.open(path) as im:
+        im.draft("RGB", (1024, 576))          # JPEGs decode straight to a small size: much faster
+        ImageOps.fit(im.convert("RGB"), (512, 288), Image.LANCZOS).save(out, "JPEG", quality=88)
+    return out
+
+
+def make_card(path):
+    """The current wallpaper as a small rounded picture, shown by the welcome card in new terminals."""
+    from PIL import Image, ImageDraw, ImageOps
+    w, h, radius, ss = 512, 288, 24, 4            # twice the size it is shown at, so it stays sharp when scaled
+    with Image.open(path) as im:
+        im.draft("RGB", (w * 2, h * 2))
+        card = ImageOps.fit(im.convert("RGB"), (w, h), Image.LANCZOS).convert("RGBA")
+    box = (0, 0, w * ss - 1, h * ss - 1)
+    shape = Image.new("L", (w * ss, h * ss), 0)
+    ImageDraw.Draw(shape).rounded_rectangle(box, radius * ss, fill=255)
+    edge = Image.new("L", (w * ss, h * ss), 0)
+    ImageDraw.Draw(edge).rounded_rectangle(box, radius * ss, outline=255, width=2 * ss)
+    # a hairline of light around the edge, so a dark photograph still reads as a card on a dark terminal
+    hairline = edge.resize((w, h), Image.LANCZOS).point(lambda v: v * 30 // 255)
+    card = Image.composite(Image.new("RGBA", (w, h), (255, 255, 255, 255)), card, hairline)
+    card.putalpha(shape.resize((w, h), Image.LANCZOS))
+    os.makedirs(os.path.dirname(CARD), exist_ok=True)
+    tmp = CARD + ".tmp"
+    card.save(tmp, "PNG", compress_level=3)
+    os.replace(tmp, CARD)
+    # what the shell sends to kitty to show it: "read this PNG file yourself", with the path in base64.
+    # Kept in a file so the welcome card does not have to encode anything when a terminal opens.
+    import base64
+    with open(CARD + ".kitty.tmp", "w") as f:
+        f.write("a=T,f=100,t=f,C=1,q=2;" + base64.standard_b64encode(CARD.encode()).decode())
+    os.replace(CARD + ".kitty.tmp", CARD + ".kitty")
+    return CARD
+
+
+DEFAULT_ACCENT = "#4fd1c5"          # Summit teal, for photographs with no clear colour
+KITTY_ACCENT = os.path.join(HOME, ".config", "kitty", "accent.conf")
+
+
+# ---- accent colour from the wallpaper ------------------------------------------------------------
+# Done in OKLab, a colour space where equal distances look equally different, so "most vivid" and
+# "same lightness" mean what the eye sees:
+#   1. the photo is sampled (about 2,500 pixels) and grouped into 12 colours with k-means;
+#   2. each group is scored like Android's "Material You" seed colour: how much of the picture has
+#      that hue (pixels within 20 degrees) and how colourful it is, ignoring greys and specks;
+#   3. the winning hue becomes a family of colours at fixed lightness levels, each checked for
+#      contrast against the Summit interface (WCAG ratios) and pulled back into the sRGB range.
+UI_BG, UI_TEXT, UI_DARK_TEXT = "#171c23", "#dce3ea", "#0e161a"   # window, text, text on the accent
+
+
+def _lin(c):
+    return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
+
+
+def _gam(c):
+    return 12.92 * c if c <= 0.0031308 else 1.055 * c ** (1 / 2.4) - 0.055
+
+
+def _to_oklab(r, g, b):
+    r, g, b = _lin(r / 255), _lin(g / 255), _lin(b / 255)
+    l = (0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b) ** (1 / 3)
+    m = (0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b) ** (1 / 3)
+    s = (0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b) ** (1 / 3)
+    return (0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s,
+            1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s,
+            0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s)
+
+
+def _oklab_to_lin(L, a, b):
+    l = (L + 0.3963377774 * a + 0.2158037573 * b) ** 3
+    m = (L - 0.1055613458 * a - 0.0638541728 * b) ** 3
+    s = (L - 0.0894841775 * a - 1.2914855480 * b) ** 3
+    return (4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+            -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+            -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s)
+
+
+def _oklch_hex(L, C, h):
+    """OKLCH to hex; chroma is reduced until the colour fits in sRGB (keeps hue and lightness)."""
+    import math
+    lo, hi = 0.0, C
+    for _ in range(24):
+        c = hi if lo == hi else (lo + hi) / 2
+        rgb = _oklab_to_lin(L, c * math.cos(h), c * math.sin(h))
+        if all(-1e-4 <= v <= 1 + 1e-4 for v in rgb):
+            lo = c
+            if c == hi:
+                break
+        else:
+            hi = c
+    rgb = _oklab_to_lin(L, lo * math.cos(h), lo * math.sin(h))
+    return "#%02x%02x%02x" % tuple(round(max(0, min(1, _gam(max(0, v)))) * 255) for v in rgb)
+
+
+def _contrast(x, y):
+    def lum(hx):
+        r, g, b = (_lin(int(hx[i:i + 2], 16) / 255) for i in (1, 3, 5))
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b
+    a, b = sorted((lum(x), lum(y)), reverse=True)
+    return (a + 0.05) / (b + 0.05)
+
+
+def pick_seed(path):
+    """(hue in radians, chroma) of the photograph's character colour, or None for a grey picture."""
+    import math, random
+    from PIL import Image
+    with Image.open(path) as im:
+        im.draft("RGB", (320, 180))
+        raw = im.convert("RGB").resize((64, 40), Image.BILINEAR).tobytes()
+    px = [tuple(raw[i:i + 3]) for i in range(0, len(raw), 3)]
+    lab = [_to_oklab(*p) for p in px]
+    rnd = random.Random(7)
+    # k-means++ seeding, then 10 rounds
+    cents = [lab[rnd.randrange(len(lab))]]
+    while len(cents) < 12:
+        d = [min((p[0]-c[0])**2 + (p[1]-c[1])**2 + (p[2]-c[2])**2 for c in cents) for p in lab]
+        t, acc = rnd.random() * sum(d), 0.0
+        for p, w in zip(lab, d):
+            acc += w
+            if acc >= t:
+                cents.append(p); break
+    for _ in range(10):
+        groups = [[] for _ in cents]
+        for p in lab:
+            k = min(range(len(cents)), key=lambda i: (p[0]-cents[i][0])**2 + (p[1]-cents[i][1])**2 + (p[2]-cents[i][2])**2)
+            groups[k].append(p)
+        cents = [tuple(sum(v[i] for v in g) / len(g) for i in range(3)) if g else c for g, c in zip(groups, cents)]
+    n = len(lab)
+    hues = [(math.atan2(b, a), math.hypot(a, b)) for _, a, b in lab]
+    best, best_score, muted = None, -1e9, None
+    for c, g in zip(cents, groups):
+        if not g:
+            continue
+        L, a, b = c
+        C, h = math.hypot(a, b), math.atan2(b, a)
+        share = len(g) / n
+        if C >= 0.02 and share >= 0.03 and (muted is None or C * share > muted[2]):
+            muted = (h, C, C * share)
+        if C < 0.045 or share < 0.01 or L < 0.18:          # greys, specks, near-black
+            continue
+        near = sum(1 for hh, cc in hues if cc > 0.03 and abs((hh - h + math.pi) % (2 * math.pi) - math.pi) < math.radians(20)) / n
+        cam = C * 370                                          # roughly Material's chroma units
+        score = near * 70 + (cam - 48) * (0.3 if cam >= 48 else 0.1)
+        if score > best_score:
+            best, best_score = (h, C), score
+    if best:
+        return best
+    return (muted[0], 0.05) if muted else None
+
+
+def accent_family(path):
+    """accent: cursor, highlights, active borders; tint: selection and current-tab background;
+    soft: text on the tint (tab numbers). All share the photograph's hue."""
+    import math
+    seed = pick_seed(path)
+    if seed is None:
+        return {"accent": DEFAULT_ACCENT, "tint": "#223f44", "soft": "#81e6d9"}
+    h, C = seed
+    C = min(max(C, 0.10), 0.16) if C >= 0.045 else C       # vivid but not neon; grey photos stay muted
+    # accent: light enough for 6:1 on the window and for dark text on it (Summit selection text)
+    L = 0.74
+    acc = _oklch_hex(L, C, h)
+    while (_contrast(acc, UI_BG) < 6.0 or _contrast(acc, UI_DARK_TEXT) < 7.0) and L < 0.95:
+        L += 0.01; acc = _oklch_hex(L, C, h)
+    # tint: a dark wash of the hue that normal text stays readable on (at least 8:1)
+    Lt = 0.35
+    tint = _oklch_hex(Lt, min(0.07, C * 0.5), h)
+    while _contrast(tint, UI_TEXT) < 8.0 and Lt > 0.22:
+        Lt -= 0.01; tint = _oklch_hex(Lt, min(0.07, C * 0.5), h)
+    soft = _oklch_hex(0.88, min(0.09, C * 0.6), h)
+    return {"accent": acc, "tint": tint, "soft": soft}
+
+
+def pick_accent(path):
+    return accent_family(path)["accent"]
+
+
+def mix(a, b, t):
+    pa = [int(a[i:i + 2], 16) for i in (1, 3, 5)]; pb = [int(b[i:i + 2], 16) for i in (1, 3, 5)]
+    return "#%02x%02x%02x" % tuple(round(x + (y - x) * t) for x, y in zip(pa, pb))
+
+
+def apply_accent(path):
+    """Use the wallpaper's colour as the accent: Plasma (task bar, highlights, buttons) and kitty
+    (cursor, current tab, active split border, scrollbar). Running kitty windows reload at once."""
+    fam = accent_family(path)
+    acc, tint, light = fam["accent"], fam["tint"], fam["soft"]
+    kitty = f"""# Written by `wall` from the current wallpaper. Do not edit: the next wallpaper replaces it.
+cursor                  {acc}
+active_border_color     {acc}
+selection_background    {tint}
+active_tab_background   {tint}
+scrollbar_handle_color  {acc}
+active_tab_title_template "{{fmt.bg.default}}{{fmt.fg._{tint[1:]}}}\ue0b6{{fmt.bg._{tint[1:]}}}{{fmt.fg._{light[1:]}}}{{index}}{{fmt.fg._f0f4f8}} {{custom}}{{fmt.bg.default}}{{fmt.fg._{tint[1:]}}}\ue0b4"
+"""
+    os.makedirs(os.path.dirname(KITTY_ACCENT), exist_ok=True)
+    with open(KITTY_ACCENT + ".tmp", "w") as f:
+        f.write(kitty)
+    os.replace(KITTY_ACCENT + ".tmp", KITTY_ACCENT)
+    subprocess.run(["pkill", "-USR1", "-x", "kitty"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    subprocess.run(["plasma-apply-colorscheme", "Summit", "--accent-color", acc],
+                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    return acc
+
+
+def apply(path):
+    path = os.path.abspath(os.path.expanduser(path))
+    if not os.path.isfile(path):
+        sys.exit(f"wall: no such image: {path}")
+    r = subprocess.run(["plasma-apply-wallpaperimage", path], capture_output=True, text=True)
+    if r.returncode != 0:
+        sys.exit(f"wall: could not set the wallpaper: {(r.stderr or r.stdout).strip()}")
+    # the lock screen follows the desktop
+    subprocess.Popen(["kwriteconfig6", "--file", "kscreenlockerrc", "--group", "Greeter", "--group", "Wallpaper",
+                      "--group", "org.kde.image", "--group", "General", "--key", "Image", "file://" + path],
+                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)   # not waited for: keeps the switch quick
+    os.makedirs(os.path.dirname(STATE), exist_ok=True)
+    with open(STATE + ".tmp", "w") as f:
+        f.write(path + "\n")
+    os.replace(STATE + ".tmp", STATE)
+    # the welcome card's picture follows too (in the background: it takes longer than the switch itself)
+    subprocess.Popen([sys.executable, os.path.abspath(__file__), "card+accent", path],
+                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+    return path
+
+
+def step(delta):
+    lib = library()
+    if not lib:
+        sys.exit("wall: the library is empty; try: wall fetch")
+    cur = current()
+    i = lib.index(cur) if cur in lib else (-1 if delta > 0 else 0)
+    return apply(lib[(i + delta) % len(lib)])
+
+
+def get(url, binary=False, tries=4):
+    for a in range(tries):
+        try:
+            with urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=90) as r:
+                data = r.read()
+            return data if binary else json.loads(data)
+        except Exception as e:  # slow, flaky link: back off and try again
+            if a == tries - 1:
+                print(f"  gave up on {url.split('?')[0]}: {type(e).__name__}", file=sys.stderr)
+                return None
+            time.sleep(4 + 4 * a)
+
+
+def dark_enough(thumb_bytes):
+    """True when the corners where the desktop widgets sit are dark enough for white text."""
+    import io
+    from PIL import Image, ImageStat
+    im = Image.open(io.BytesIO(thumb_bytes)).convert("RGB")
+    W, H = im.size
+
+    def lum(box):
+        r, g, b = ImageStat.Stat(im.crop(box)).mean
+        return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255
+    return max(lum((0, 0, int(W * .28), int(H * .58))), lum((int(W * .74), 0, W, int(H * .62)))) < 0.50 and lum((0, 0, W, H)) < 0.45
+
+
+def download(item, size=None, replace=False):
+    """item: Wallhaven record. Saves a JPEG no larger than `size`. Returns the saved path or None."""
+    import io
+    from PIL import Image
+    out = os.path.join(LIB, f"wallhaven-{item['id']}.jpg")
+    if os.path.exists(out) and not replace:
+        return out if size == "existing-ok" else None
+    if not isinstance(size, tuple):
+        size = target_size()
+    data = get(item["path"], binary=True)
+    if not data:
+        return None
+    try:
+        im = Image.open(io.BytesIO(data))
+        w, h = im.size
+    except Exception:
+        print(f"  {item['id']}: not a readable image", file=sys.stderr)
+        return None
+    os.makedirs(LIB, exist_ok=True)
+    # Shrink only when the picture is larger than needed, and then only until it still covers the
+    # target in both directions. A JPEG that already fits is saved byte for byte: no wait, no loss.
+    scale = max(size[0] / w, size[1] / h)
+    if im.format == "JPEG" and scale >= 1:
+        with open(out + ".part", "wb") as f:
+            f.write(data)
+    else:
+        im = im.convert("RGB")
+        if scale < 1:
+            im = im.resize((max(size[0], round(w * scale)), max(size[1], round(h * scale))), Image.LANCZOS)
+        im.save(out + ".part", "JPEG", quality=92, progressive=True)
+        w, h = im.size
+    os.replace(out + ".part", out)
+    make_thumb(out, force=True)
+    print(f"  + {os.path.basename(out)}  {w}x{h}", flush=True)
+    return out
+
+
+def fetch(n, words):
+    size = target_size()
+    have = {os.path.basename(p) for p in library()}
+    queries = [" ".join(words)] if words else random.sample(DEFAULT_QUERIES, len(DEFAULT_QUERIES))
+    got = 0
+    for q in queries:
+        for page in (1, 2, 3):
+            if got >= n:
+                return got
+            d = get(f"{API}/search?" + urllib.parse.urlencode({
+                "q": q, "categories": "100", "purity": "100", "atleast": f"{size[0]}x{size[1]}",
+                "ratios": "16x9,16x10", "sorting": "toplist", "topRange": "1y", "page": page}))
+            if not d or not d.get("data"):
+                break
+            for item in d["data"]:
+                if got >= n:
+                    return got
+                if f"wallhaven-{item['id']}.jpg" in have:
+                    continue
+                t = get(item["thumbs"]["small"], binary=True)
+                if not t or not dark_enough(t):
+                    continue
+                if download(item, size):
+                    got += 1
+                    have.add(f"wallhaven-{item['id']}.jpg")
+            time.sleep(1.5)
+    return got
+
+
+def main(argv):
+    cmd = argv[0] if argv else "help"
+    if cmd == "next":
+        print(step(+1))
+    elif cmd == "prev":
+        print(step(-1))
+    elif cmd == "random":
+        lib = [p for p in library() if p != current()]
+        if not lib:
+            sys.exit("wall: the library is empty; try: wall fetch")
+        print(apply(random.choice(lib)))
+    elif cmd == "set" and len(argv) > 1:
+        print(apply(argv[1]))
+    elif cmd == "current":
+        print(current())
+    elif cmd == "list":
+        cur = current()
+        for p in library():
+            print(("* " if p == cur else "  ") + p)
+    elif cmd == "card+accent" and len(argv) > 1:      # run in the background after a switch
+        make_card(argv[1])
+        apply_accent(argv[1])
+    elif cmd == "accent":
+        path = argv[1] if len(argv) > 1 else current()
+        if not path or not os.path.isfile(path):
+            sys.exit("wall: no current wallpaper to take the colour from")
+        print(apply_accent(path))
+    elif cmd == "card":
+        path = argv[1] if len(argv) > 1 else current()
+        if not path or not os.path.isfile(path):
+            sys.exit("wall: no current wallpaper to draw the card from")
+        print(make_card(path))
+    elif cmd == "thumbs":
+        for p in library():
+            make_thumb(p, force="--force" in argv)
+        print(f"{len(library())} thumbnails in {THUMBS}")
+    elif cmd == "add" and len(argv) > 1:
+        args = [a for a in argv[1:] if not a.startswith("--")]
+        use, replace = "--use" in argv, "--replace" in argv
+        size, n, last = target_size(), 0, None
+        for wid in args:
+            have = os.path.join(LIB, f"wallhaven-{wid}.jpg")
+            if os.path.exists(have) and not replace:
+                last = have
+                continue
+            d = get(f"{API}/w/{wid}")
+            if d and d.get("data") and d["data"].get("purity") == "sfw":
+                p = download(d["data"], size, replace)
+                if p:
+                    n, last = n + 1, p
+        if use and last:
+            apply(last)
+        print(f"added {n}" + (f"\n{last}" if use and last else ""))
+    elif cmd == "size":
+        print("%dx%d" % target_size())
+    elif cmd == "fetch":
+        n, words, args = 6, [], argv[1:]
+        while args:
+            a = args.pop(0)
+            if a == "-n" and args:
+                n = max(1, min(40, int(args.pop(0))))
+            else:
+                words.append(a)
+        print(f"added {fetch(n, words)}")
+    else:
+        print(__doc__.strip())
+
+
+if __name__ == "__main__":
+    import signal
+    signal.signal(signal.SIGPIPE, signal.SIG_DFL)   # `wall list | head` ends quietly
+    main(sys.argv[1:])

@@ -1,0 +1,13 @@
+{
+    "KPackageStructure": "Plasma/Applet",
+    "KPlugin": {
+        "Id": "summit.claude",
+        "Name": "Claude Usage",
+        "Description": "Claude plan usage: the 5-hour and weekly windows, as reported by Claude Code",
+        "Icon": "office-chart-ring",
+        "Category": "System Information",
+        "License": "GPL-3.0",
+        "Version": "1.0"
+    },
+    "X-Plasma-API-Minimum-Version": "6.0"
+}

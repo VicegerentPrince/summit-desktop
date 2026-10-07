@@ -1,0 +1,48 @@
+# Summit · bat 0.26.1
+# Installs to ~/.config/bat/config. One option per line, written exactly as on
+# the command line.
+
+# The theme file is ~/.config/bat/themes/Summit.tmTheme. Run `bat cache --build`
+# after installing or changing it; until then bat warns "Unknown theme".
+--theme="Summit"
+
+# Line numbers, git change markers and the file name. No grid.
+--style="numbers,changes,header"
+
+# Italics for the scopes the theme marks as italic (comments).
+--italic-text=always
+
+# Pager. Deliberately without --no-init (-X): that flag keeps less off the
+# alternate screen, and the wheel then scrolls the terminal instead of the
+# file. Deliberately without --mouse too: kitty (and the Summit tmux.conf)
+# already turn the wheel into arrow keys for less, and click-and-drag text
+# selection keeps working.
+#   --RAW-CONTROL-CHARS   pass colours through
+#   --quit-if-one-screen  short files print and return to the prompt
+#   --quit-on-intr        Ctrl+C leaves the pager
+--pager="less --RAW-CONTROL-CHARS --quit-if-one-screen --quit-on-intr"
+
+# Dotfiles bat does not recognise on its own.
+# Ignore files: .ignore .fdignore .rgignore .dockerignore .npmignore ...
+--map-syntax ".*ignore:Git Ignore"
+# .env.anything
+--map-syntax ".env.*:DotENV"
+# Files of command-line flags or "word value" lines with # comments.
+--map-syntax "*ripgreprc:Bourne Again Shell (bash)"
+--map-syntax "*fzfrc:Bourne Again Shell (bash)"
+--map-syntax "*nanorc:Bourne Again Shell (bash)"
+--map-syntax "*tmux.conf:Bourne Again Shell (bash)"
+--map-syntax "**/kitty/*.conf:Bourne Again Shell (bash)"
+--map-syntax "**/btop/themes/*.theme:Bourne Again Shell (bash)"
+# key = value files.
+--map-syntax "btop.conf:INI"
+--map-syntax ".npmrc:INI"
+--map-syntax ".pypirc:INI"
+--map-syntax ".flake8:INI"
+# KDE keeps its settings as INI files named *rc in ~/.config.
+--map-syntax "kdeglobals:INI"
+--map-syntax "**/.config/*rc:INI"
+# JSON without the extension.
+--map-syntax ".prettierrc:JSON"
+--map-syntax ".eslintrc:JSON"
+--map-syntax ".babelrc:JSON"

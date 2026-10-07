@@ -1,0 +1,102 @@
+# Summit · delta 0.19.2 (options are identical in 0.20.x)
+#
+# Pull this in from ~/.gitconfig:
+#     [include]
+#         path = ~/.config/git/delta.gitconfig
+#
+# Everything here is about how diffs, blame and grep output are drawn; nothing
+# changes what git writes.
+#
+# Needs the Summit bat theme in bat's cache: with
+# ~/.config/bat/themes/Summit.tmTheme in place, run `bat cache --build` once.
+# Until then delta prints "Unknown theme 'Summit', using default" on every run.
+
+[core]
+	pager = delta
+
+[interactive]
+	diffFilter = delta --color-only
+
+[delta]
+	# A key set in this section always wins over a feature. The two things a
+	# feature has to be able to change (side-by-side and the line-number
+	# layout) are therefore kept in the "unified" and "side" features below.
+	features = unified
+
+	dark = true
+	syntax-theme = Summit
+	true-color = always
+	navigate = true
+	line-numbers = true
+	hyperlinks = true
+	tabs = 4
+
+	# File header: blue name over a rule in the strong border colour.
+	file-style = "#7cb7ff" bold
+	file-decoration-style = "#434952" ul
+
+	# Hunk header: one muted line, "path:line: enclosing code", no box.
+	hunk-header-style = file line-number syntax
+	hunk-header-file-style = "#8693a1"
+	hunk-header-line-number-style = "#8693a1"
+	hunk-header-decoration-style = none
+
+	# Changed lines keep their syntax colours on the Summit diff backgrounds.
+	minus-style = syntax "#33211f"
+	minus-emph-style = syntax "#55302c"
+	plus-style = syntax "#1c2e24"
+	plus-emph-style = syntax "#2a4a34"
+	whitespace-error-style = "#f47067" reverse
+	inline-hint-style = "#5c6773"
+
+	# Line numbers: dim, red and green on changed lines, subtle divider.
+	line-numbers-left-style = "#2a333f"
+	line-numbers-right-style = "#2a333f"
+	line-numbers-zero-style = "#5c6773"
+	line-numbers-minus-style = "#f47067"
+	line-numbers-plus-style = "#84cc6a"
+
+	# Moved blocks (diff.colorMoved). git marks them bold magenta / blue
+	# (old place) and bold cyan / yellow (new place); delta would pass those
+	# through as plain coloured text. Mapped instead to syntax colours on the
+	# raised row (old place) and on the selection tint (new place).
+	map-styles = \
+		bold purple => syntax "#28313d", \
+		bold blue => syntax "#28313d", \
+		bold cyan => syntax "#223f44", \
+		bold yellow => syntax "#223f44"
+
+	# Merge conflicts (two diffs: ancestor to ours, ancestor to theirs).
+	merge-conflict-ours-diff-header-style = "#e3b341" bold
+	merge-conflict-ours-diff-header-decoration-style = "#434952" ul
+	merge-conflict-theirs-diff-header-style = "#e3b341" bold
+	merge-conflict-theirs-diff-header-decoration-style = "#434952" ul
+
+	# git blame: bands step through base, panel and raised.
+	blame-palette = "#171c23 #1d232c #28313d"
+	blame-code-style = syntax
+	blame-separator-style = "#434952"
+
+	# git grep and `rg --json | delta`: same roles as ripgreprc.
+	grep-file-style = "#7cb7ff"
+	grep-line-number-style = "#8693a1"
+	grep-match-line-style = syntax
+	grep-match-word-style = "#81e6d9" bold "#223f44"
+
+# Default layout: old and new line numbers, then one divider.
+[delta "unified"]
+	line-numbers-left-format = "{nm:>4} "
+	line-numbers-right-format = "{np:>4} │ "
+
+# Side-by-side, off by default. Turn it on for a shell with
+#     export DELTA_FEATURES=+side      (and  export DELTA_FEATURES=+  to undo)
+# or for one command with
+#     git -c delta.features=side diff
+[delta "side"]
+	side-by-side = true
+	line-numbers-left-format = "{nm:>4} │ "
+	line-numbers-right-format = "{np:>4} │ "
+	wrap-max-lines = unlimited
+
+[diff]
+	colorMoved = default

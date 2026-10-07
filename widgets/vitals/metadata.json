@@ -1,0 +1,13 @@
+{
+    "KPackageStructure": "Plasma/Applet",
+    "KPlugin": {
+        "Id": "summit.vitals",
+        "Name": "Vitals",
+        "Description": "CPU, memory, disk, network, temperature and battery on a glass card",
+        "Icon": "utilities-system-monitor",
+        "Category": "System Information",
+        "License": "GPL-3.0",
+        "Version": "1.0"
+    },
+    "X-Plasma-API-Minimum-Version": "6.0"
+}

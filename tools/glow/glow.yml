@@ -1,0 +1,14 @@
+# Summit · glow 3.0.0
+# Installs to ~/.config/glow/glow.yml (replaces the default file glow created)
+
+# style name or JSON path: the Summit style next to this file (a dark style).
+# glow 3.0.0 does not expand "~" here, so the path is written out in full.
+style: "@CONFIG@/glow/summit.json"
+# mouse support (TUI-mode only)
+mouse: false
+# use pager to display markdown
+pager: true
+# word-wrap at width
+width: 100
+# show all files, including hidden and ignored.
+all: false

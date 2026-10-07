@@ -1,0 +1,51 @@
+# Summit · lazygit 0.65.1
+# Installs to ~/.config/lazygit/config.yml
+# Only the look and the diff renderer are set here; everything else stays at
+# lazygit's defaults.
+
+gui:
+  # Nerd Font v3 glyphs (the old `showIcons` key is deprecated).
+  nerdFontsVersion: "3"
+  showFileIcons: true
+  border: rounded
+
+  theme:
+    # Accent is reserved for the focused panel.
+    activeBorderColor: ['#4fd1c5', bold]            # teal
+    inactiveBorderColor: ['#5c6773']                # dim
+    searchingActiveBorderColor: ['#e3b341', bold]   # amber
+    optionsTextColor: ['#7cb7ff']                   # blue
+    selectedLineBgColor: ['#28313d']                # raised / selection row
+    inactiveViewSelectedLineBgColor: ['#1d232c', bold]  # panel; bold is lazygit's own cue
+    # Hash of a copied (cherry-pick) commit: blue on the stronger background.
+    # The selected row keeps its own background and only takes the foreground,
+    # so the foreground has to stay readable on #28313d as well.
+    cherryPickedCommitFgColor: ['#7cb7ff']
+    cherryPickedCommitBgColor: ['#323d4b']
+    # Marked base commit for a rebase: amber on the same background.
+    markedBaseCommitFgColor: ['#e3b341']
+    markedBaseCommitBgColor: ['#323d4b']
+    unstagedChangesColor: ['#f47067']               # red
+    defaultFgColor: ['#dce3ea']                     # text
+
+  # lazygit otherwise derives a colour per author from a hash of the name,
+  # which lands on any hue at high saturation. One muted tone keeps the commit
+  # list calm. Delete this block to get the per-author colours back.
+  authorColors:
+    '*': '#8693a1'
+
+git:
+  # Diffs go through delta. `|` cycles between the two entries.
+  #   --paging=never   lazygit scrolls the pane itself
+  #   --dark           delta cannot detect the background from inside lazygit
+  #   --hyperlinks...  line numbers become links that open the editor at that
+  #                    line, through lazygit's own lazygit-edit:// handler
+  #   --features=side  the side-by-side layout defined in delta.gitconfig;
+  #                    --side-by-side keeps the entry working without it
+  # Colours come from the [delta] section of the git config (delta.gitconfig).
+  # delta sizes itself to the pane; its `navigate` keys do not work in here.
+  diffRenderers:
+    - name: delta
+      command: 'delta --dark --paging=never --line-numbers --hyperlinks --hyperlinks-file-link-format="lazygit-edit://{path}:{line}"'
+    - name: delta side-by-side
+      command: 'delta --dark --paging=never --side-by-side --features=side --line-numbers --hyperlinks --hyperlinks-file-link-format="lazygit-edit://{path}:{line}"'
