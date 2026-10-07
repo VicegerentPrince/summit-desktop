@@ -1,6 +1,8 @@
 # KDE Store listings
 
-Build the files with `store/build.sh` (they land in `dist/`). Images are in `store/images/`.
+Build the files with `store/build.sh` (they land in `dist/`). Images are in `store/images/`;
+`summit-logo.png` is the square logo for every product (if the form asks for one).
+Add page: https://store.kde.org/product/add
 Licence **GPL-3.0** for every product except Summit Glass, which keeps Breeze's **LGPL**. Link each to https://github.com/VicegerentPrince/summit-desktop.
 
 | # | Product | Category | File | Images |
