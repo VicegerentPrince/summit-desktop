@@ -8,7 +8,7 @@
       scroll on the panel icon ... next / previous without opening anything
       middle-click the icon ...... a random one
 
-    Files and wallpaper switching are done by the `wall` command (~/.local/bin/wall).
+    Files and wallpaper switching are done by `wall` (contents/code/wall, also usable from a terminal).
     Network use: only while the Discover tab is open (search results and their thumbnails),
     and when a picture is downloaded.
 */
@@ -27,7 +27,8 @@ PlasmoidItem {
     id: root
 
     readonly property string home: StandardPaths.writableLocation(StandardPaths.HomeLocation).toString().replace(/^file:\/\//, "")
-    readonly property string wall: "\"" + home + "/.local/bin/wall\""
+    readonly property string wallScript: decodeURIComponent(Qt.resolvedUrl("../code/wall").toString().replace(/^file:\/\//, ""))
+    readonly property string wall: "python3 " + quote(wallScript)
     readonly property string libraryPath: home + "/Pictures/Wallpapers"
     readonly property url library: "file://" + libraryPath
     readonly property string thumbs: StandardPaths.writableLocation(StandardPaths.GenericCacheLocation) + "/summit/wallpapers/"
@@ -73,13 +74,18 @@ PlasmoidItem {
             const tag = source.replace(/^.*#([\w.-]+):\d+$/, "$1")
             const out = (data["stdout"] || "").trim()
             const ok = data["exit code"] === 0
+            if (data["exit code"] === 3) root.say("Previews and the accent need Python Pillow (python3-pillow)")
             if (tag.startsWith("get.")) {
                 const id = tag.slice(4)
                 const b = Object.assign({}, root.busy); delete b[id]; root.busy = b
                 const last = out.split("\n").pop()
                 if (ok && last.startsWith("/")) root.current = last
                 else root.say("Could not download that one")
-            } else if (tag === "thumbs") {
+            } else if (tag === "accentstatus") {
+                const on = out === "on"
+                if (Plasmoid.configuration.matchAccent !== on) Plasmoid.configuration.matchAccent = on
+                root.accentSynced = true
+            } else if (tag === "accent" || tag === "thumbs") {
                 // nothing to show
             } else if (ok && out.length > 0) {
                 root.current = out.split("\n").pop()
@@ -96,7 +102,12 @@ PlasmoidItem {
         run("add --use " + quote(id), "get." + id)
     }
 
-    Component.onCompleted: run("current", "current")
+    // The accent setting lives in wall (it also works from a terminal); the checkbox mirrors it.
+    property bool accentSynced: false
+    readonly property bool matchAccent: Plasmoid.configuration.matchAccent
+    onMatchAccentChanged: if (accentSynced) run(matchAccent ? "accent on" : "accent off", "accent")
+
+    Component.onCompleted: { run("current", "current"); run("accent status", "accentstatus") }
     onExpandedChanged: if (root.expanded) { run("current", "current"); run("thumbs", "thumbs") }
 
     compactRepresentation: MouseArea {
@@ -233,6 +244,22 @@ PlasmoidItem {
             nameFilters: ["*.jpg", "*.jpeg", "*.png", "*.webp", "*.avif"]
             showDirs: false
             sortField: FolderListModel.Name
+        }
+        // Thumbnails that exist so far. A card shows its thumbnail once `wall thumbs` has made it,
+        // and the picture itself (decoded at thumbnail size) until then.
+        FolderListModel {
+            id: thumbFiles
+            folder: root.thumbs
+            nameFilters: ["*.jpg"]
+            showDirs: false
+            onCountChanged: full.thumbSetRevision++
+        }
+        property int thumbSetRevision: 0
+        readonly property var thumbSet: {
+            thumbSetRevision
+            const set = {}
+            for (let i = 0; i < thumbFiles.count; i++) set[thumbFiles.get(i, "fileBaseName")] = true
+            return set
         }
         function has(id) {   // is this Wallhaven picture already in the library?
             files.count      // re-evaluate when the folder changes
@@ -410,7 +437,7 @@ PlasmoidItem {
 
                         width: grid.cellWidth
                         height: grid.cellHeight
-                        picture: root.thumbs + fileBaseName + ".jpg"
+                        picture: full.thumbSet[fileBaseName] ? root.thumbs + fileBaseName + ".jpg" : fileUrl
                         fallback: fileUrl   // a picture dropped in by hand has no thumbnail yet
                         isCurrent: root.current === filePath
                         isFocus: grid.activeFocus && grid.currentIndex === index

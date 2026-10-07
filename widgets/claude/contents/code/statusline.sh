@@ -7,6 +7,7 @@
 # Side effect, on purpose: the plan usage figures are saved to ~/.cache/summit/claude-usage.json
 # so the desktop "Claude" card can show them.
 input=$(cat)
+command -v jq >/dev/null || { echo "Summit status line: please install jq"; exit 0; }
 
 IFS=$'\t' read -r model effort cwd ctx h5 h5r d7 d7r added removed < <(
     jq -r '[

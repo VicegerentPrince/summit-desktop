@@ -1,13 +1,22 @@
 {
     "KPackageStructure": "Plasma/Applet",
     "KPlugin": {
-        "Id": "summit.wallpapers",
-        "Name": "Wallpapers",
-        "Description": "A gallery of your wallpapers: click one to use it, scroll on the icon to cycle",
+        "Authors": [
+            {
+                "Name": "Muhammad Muneeb",
+                "Website": "https://github.com/VicegerentPrince"
+            }
+        ],
+        "BugReportUrl": "https://github.com/VicegerentPrince/summit-desktop/issues",
+        "Category": "Multimedia",
+        "Description": "A wallpaper gallery for the panel: your library plus endless top-rated Wallhaven photos at your screen's resolution; scroll on the icon to cycle; optional accent colour from each wallpaper",
+        "EnabledByDefault": true,
         "Icon": "preferences-desktop-wallpaper",
-        "Category": "Miscellaneous",
+        "Id": "summit.wallpapers",
         "License": "GPL-3.0",
-        "Version": "1.0"
+        "Name": "Summit Wallpapers",
+        "Version": "1.0.0",
+        "Website": "https://github.com/VicegerentPrince/summit-desktop"
     },
     "X-Plasma-API-Minimum-Version": "6.0"
 }

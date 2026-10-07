@@ -23,7 +23,10 @@ PlasmoidItem {
     height: 144
 
     readonly property int rate: 2000
-    readonly property string face: "Inter Display"
+    // Inter Display ships inside the widget (contents/fonts), so the card looks the same everywhere
+    FontLoader { id: interLight; source: Qt.resolvedUrl("../fonts/InterDisplay-ExtraLight.ttf") }
+    FontLoader { id: interMedium; source: Qt.resolvedUrl("../fonts/InterDisplay-Medium.ttf") }
+    readonly property string face: interMedium.status === FontLoader.Ready ? interMedium.font.family : "Inter Display"
 
     MacOSColors {
         id: colors

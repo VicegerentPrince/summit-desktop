@@ -21,8 +21,12 @@ PlasmoidItem {
     width: 368
     height: 144
 
-    readonly property string face: "Inter Display"
-    readonly property string command: "cat \"${XDG_CACHE_HOME:-$HOME/.cache}/summit/claude-usage.json\" 2>/dev/null; echo"
+    // Inter Display ships inside the widget (contents/fonts), so the card looks the same everywhere
+    FontLoader { id: interLight; source: Qt.resolvedUrl("../fonts/InterDisplay-ExtraLight.ttf") }
+    FontLoader { id: interMedium; source: Qt.resolvedUrl("../fonts/InterDisplay-Medium.ttf") }
+    readonly property string face: interMedium.status === FontLoader.Ready ? interMedium.font.family : "Inter Display"
+    readonly property string command: "cat \"${XDG_CACHE_HOME:-$HOME/.cache}/summit/claude-usage.json\" 2>/dev/null || echo MISSING"
+    property bool connected: true
 
     property int fiveHour: -1
     property real fiveHourReset: 0
@@ -30,6 +34,7 @@ PlasmoidItem {
     property real weekReset: 0
     property real nowSec: Date.now() / 1000
 
+    readonly property string waiting: connected ? "updates when Claude Code runs" : "Not connected yet: right-click › Configure › Setup"
     readonly property color warn: "#FF9F0A"
     readonly property color bad: "#FF453A"
 
@@ -47,7 +52,8 @@ PlasmoidItem {
         onNewData: (source, data) => {
             root.nowSec = Date.now() / 1000
             const text = (data["stdout"] || "").trim()
-            if (text === "") return
+            root.connected = text !== "MISSING"
+            if (text === "" || text === "MISSING") return
             try {
                 const j = JSON.parse(text)
                 root.fiveHour = j.five_hour ? Math.round(j.five_hour.used) : -1
@@ -177,7 +183,7 @@ PlasmoidItem {
                 height: parent.height
                 label: "Claude · 5-hour"
                 pct: root.shown(root.fiveHour, root.fiveHourReset)
-                caption: root.fiveHour < 0 ? "updates when Claude Code runs" : root.until(root.fiveHourReset)
+                caption: root.fiveHour < 0 ? root.waiting : root.until(root.fiveHourReset)
             }
             Window {
                 width: cols.colWidth
@@ -221,8 +227,11 @@ PlasmoidItem {
                 font.features: { "tnum": 1 }
                 anchors.verticalCenter: parent.verticalCenter
             }
-            Note { text: root.fiveHour < 0 ? "updates when Claude Code runs" : root.until(root.fiveHourReset) }
-            Note { text: root.week < 0 ? "" : root.until(root.weekReset) }
+            Note {
+                width: root.connected ? cols.colWidth : footer.width
+                text: root.fiveHour < 0 ? root.waiting : root.until(root.fiveHourReset)
+            }
+            Note { visible: root.connected; text: root.week < 0 ? "" : root.until(root.weekReset) }
         }
     }
 }

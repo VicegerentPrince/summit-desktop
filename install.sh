@@ -22,7 +22,12 @@ OWNED=(
   .config/kitty/kitty.conf .config/kitty/summit.conf .config/kitty/tab_bar.py
   .config/atuin/config.toml .config/atuin/themes/summit.toml
   .config/fzf/fzfrc .config/fontconfig/fonts.conf .config/nvim/init.lua
-  .claude/statusline.sh .local/bin/wall .local/share/applications/kitty.desktop
+  .local/share/applications/kitty.desktop
+)
+# commands that live inside a widget (so the KDE Store widget carries its own copy): repo path -> home path
+TOOLS=(
+  "widgets-panel/wallpapers/contents/code/wall:.local/bin/wall"
+  "widgets/claude/contents/code/statusline.sh:.claude/statusline.sh"
 )
 # files you keep editing yourself: only created when missing
 SEED=( .config/mise/config.toml .config/Code/User/settings.json .config/Cursor/User/settings.json )
@@ -32,6 +37,10 @@ if [[ ${1:-} == --save ]]; then
     [[ -e $HOME/$f ]] || continue
     cmp -s "$HOME/$f" "$SRC/$f" 2>/dev/null && continue
     install -D -m "$(stat -c %a "$HOME/$f")" "$HOME/$f" "$SRC/$f" && note "saved $f"
+  done
+  for t in "${TOOLS[@]}"; do
+    src=$HERE/${t%%:*} dst=$HOME/${t#*:}
+    [[ -e $dst ]] && ! cmp -s "$dst" "$src" && install -m 755 "$dst" "$src" && note "saved ${t#*:}"
   done
   mkdir -p "$SRC/.local/share/zsh/site-functions"
   cp -u "$HOME"/.local/share/zsh/site-functions/_* "$SRC/.local/share/zsh/site-functions/" 2>/dev/null
@@ -52,6 +61,12 @@ for f in "${OWNED[@]}"; do
   if [[ -e $HOME/$f ]]; then install -D -m 644 "$HOME/$f" "$BACKUP/$f"; fi
   install -D -m "$(stat -c %a "$SRC/$f")" "$SRC/$f" "$HOME/$f" && note "installed $f" && changed=1
 done
+for t in "${TOOLS[@]}"; do
+  src=$HERE/${t%%:*} dst=$HOME/${t#*:}
+  cmp -s "$src" "$dst" 2>/dev/null && continue
+  [[ -e $dst ]] && install -D -m 644 "$dst" "$BACKUP/${t#*:}"
+  install -D -m 755 "$src" "$dst" && note "installed ${t#*:}" && changed=1
+done
 for f in "${SEED[@]}"; do
   [[ -e $HOME/$f || ! -e $SRC/$f ]] || { install -D -m 644 "$SRC/$f" "$HOME/$f" && note "created $f" && changed=1; }
 done
@@ -68,7 +83,7 @@ say "4. tool configs and syntax themes"
 bash "$HERE/tools/install.sh" | sed 's/^/  /'
 
 say "5. widgets"
-bash "$HERE/widgets/install.sh" 2>&1 | tail -3 | sed 's/^/  /'
+bash "$HERE/widgets/install.sh" 2>&1 | grep -E '^ *(ok|WARN|FAIL) +(summit\.|com\.)|WARN|FAIL' | sed 's/^ */    /'
 
 say "6. editor theme (VS Code, Cursor)"
 for ed in code cursor; do
@@ -92,11 +107,13 @@ kset kglobalshortcutsrc _launch none services org.kde.konsole.desktop
 command -v flatpak >/dev/null && flatpak override --user --filesystem=xdg-config/gtk-3.0:ro --filesystem=xdg-config/gtk-4.0:ro
 fc-cache -f >/dev/null 2>&1
 
-# Plasma style "Summit Glass": the default style with the panel fill at 42% instead of 85%
+# Plasma style "Summit Glass": only the see-through panel; Plasma takes everything else from the
+# stock style. Installed once (an installed style is left alone while it is in use).
 T=$HOME/.local/share/plasma/desktoptheme/summit-glass
 if [[ ! -d $T ]]; then
-  cp -r /usr/share/plasma/desktoptheme/default "$T" && cp "$HERE/plasma-style/metadata.json" "$T/" \
-    && cp "$HERE/plasma-style/panel-background.svgz" "$T/translucent/widgets/" && note "Plasma style Summit Glass installed"
+  install -D -m 644 "$HERE/plasma-style/metadata.json" "$T/metadata.json" \
+    && install -D -m 644 "$HERE/plasma-style/panel-background.svgz" "$T/translucent/widgets/panel-background.svgz" \
+    && note "Plasma style Summit Glass installed"
 fi
 [[ $(kreadconfig6 --file plasmarc --group Theme --key name) == summit-glass ]] || plasma-apply-desktoptheme summit-glass >/dev/null
 
@@ -107,8 +124,12 @@ if [[ -x $ATUIN && ! -e $HOME/.local/share/atuin/history.db && -s $HOME/.zsh_his
 fi
 # the picture on the terminal's welcome card, drawn from the current wallpaper
 [[ -r $HOME/.cache/summit/welcome.png.kitty ]] || "$HOME/.local/bin/wall" card >/dev/null 2>&1
-# accent colour from the wallpaper, for Plasma and kitty (kitty.conf includes accent.conf)
-[[ -r $HOME/.config/kitty/accent.conf ]] || "$HOME/.local/bin/wall" accent >/dev/null 2>&1
+# accent colour from the wallpaper, for Plasma and kitty (kitty.conf includes accent.conf). Switched
+# on once, on the first install; the Wallpapers widget's setting or `wall accent off` turns it off.
+if [[ ! -d $HOME/.config/summit ]]; then
+  "$HOME/.local/bin/wall" accent on >/dev/null 2>&1 && note "accent colour follows the wallpaper"
+fi
+[[ -r $HOME/.config/kitty/accent.conf ]] || "$HOME/.local/bin/wall" accent now >/dev/null 2>&1
 TLDR=$HOME/.local/share/mise/installs/tealdeer/latest/tldr
 [[ -x $TLDR && ! -d $HOME/.cache/tealdeer/tldr-pages ]] && "$TLDR" --update 2>&1 | tail -1 | sed 's/^/  /'
 

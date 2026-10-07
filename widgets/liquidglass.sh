@@ -27,7 +27,9 @@ SRC=$HOME/.local/share/summit/vendor/liquidglass-kde-widgets
 DATA=${1:-$HOME/.local/share}
 DEST=$DATA/plasma/plasmoids
 PKGS="clock-digital calendar weather music timer"
-INTER=/usr/share/fonts/rsms-inter-fonts
+# Inter Display, wherever the distribution puts it (Fedora: rsms-inter-fonts, Debian: fonts-inter, Arch: inter-font)
+INTER_THIN=$(fc-list -f '%{file}\n' 2>/dev/null | grep -m1 '/InterDisplay-Thin\.[ot]tf$' || true)
+INTER=${INTER_THIN:+$(dirname "$INTER_THIN")}          # empty when Inter Display is not installed
 ok() { printf '  ok    %s\n' "$*"; }; warn() { printf '  WARN  %s\n' "$*"; }
 [ -d "$SRC/packages" ] || { echo "missing $SRC"; exit 1; }
 mkdir -p "$DEST"
@@ -49,7 +51,7 @@ for p in $PKGS; do
     rm -rf "$DEST/$id.new"; cp -rL "$SRC/packages/$p" "$DEST/$id.new" || { warn "copy $p"; continue; }
     rm -rf "$DEST/$id"; mv "$DEST/$id.new" "$DEST/$id"
     # 4. fonts
-    if [ -d "$INTER" ]; then
+    if [ -n "$INTER" ] && [ -d "$INTER" ]; then
         F=$DEST/$id/contents/fonts
         for pair in sf_pro_display_thin.otf:InterDisplay-Thin.ttf sf_pro_display_regular.otf:InterDisplay-Regular.ttf \
                     SF-Pro-Display-Light.otf:InterDisplay-Light.ttf sf_pro_rounded.otf:InterDisplay-Medium.ttf; do

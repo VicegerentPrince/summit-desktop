@@ -10,7 +10,9 @@
     wall add [--use] ID [ID...]      download specific Wallhaven images by id (--use: switch to the last one)
     wall thumbs                      rebuild the gallery thumbnails
     wall card [FILE]                 redraw the small picture used by the terminal's welcome card
-    wall accent [FILE]               take the accent colour from the wallpaper (Plasma and kitty)
+    wall accent on | off | status    let the accent colour follow the wallpaper (Plasma, and kitty
+                                     when its config includes accent.conf), or stop
+    wall accent [FILE]               pick the accent from the current (or given) picture once
     wall size                        print the resolution downloads are sized for
 
 The library is ~/Pictures/Wallpapers: drop any image in there and it shows up in the gallery.
@@ -112,7 +114,11 @@ def make_card(path):
 
 
 DEFAULT_ACCENT = "#4fd1c5"          # Summit teal, for photographs with no clear colour
-KITTY_ACCENT = os.path.join(HOME, ".config", "kitty", "accent.conf")
+CONFIG = os.environ.get("XDG_CONFIG_HOME", os.path.join(HOME, ".config"))
+KITTY_CONF = os.path.join(CONFIG, "kitty", "kitty.conf")
+KITTY_ACCENT = os.path.join(CONFIG, "kitty", "accent.conf")
+ACCENT_FLAG = os.path.join(CONFIG, "summit", "accent-from-wallpaper")   # present = accent follows the wallpaper
+WELCOME = os.path.join(CONFIG, "zsh", "welcome.zsh")                    # the Summit terminal's welcome card
 
 
 # ---- accent colour from the wallpaper ------------------------------------------------------------
@@ -226,20 +232,83 @@ def pick_seed(path):
     return (muted[0], 0.05) if muted else None
 
 
-def accent_family(path):
+def _rgb_hex(v):
+    return "#%02x%02x%02x" % tuple(int(x) for x in v.split(",")[:3])
+
+
+def scheme_file(scheme):
+    for d in (os.path.join(os.environ.get("XDG_DATA_HOME", os.path.join(HOME, ".local", "share")), "color-schemes"),
+              "/usr/share/color-schemes"):
+        f = os.path.join(d, scheme + ".colors")
+        if os.path.isfile(f):
+            return f
+    return None
+
+
+def scheme_value(scheme, group, key):
+    f = scheme_file(scheme)
+    if not f:
+        return None
+    sect = None
+    for line in open(f, errors="replace"):
+        line = line.strip()
+        if line.startswith("["):
+            sect = line[1:-1]
+        elif sect == group and line.startswith(key + "="):
+            try:
+                return _rgb_hex(line.split("=", 1)[1])
+            except ValueError:
+                return None
+    return None
+
+
+def _kde(group, key, default, scheme=None):
+    """A colour of the scheme in use, as its designer set it: the scheme's own file first (kdeglobals
+    holds what Plasma derived for the last accent), then kdeglobals, then `default`."""
+    v = scheme_value(scheme, group, key) if scheme else None
+    if v:
+        return v
+    r = subprocess.run(["kreadconfig6", "--file", "kdeglobals", "--group", group, "--key", key],
+                       capture_output=True, text=True)
+    try:
+        return _rgb_hex(r.stdout.strip())
+    except ValueError:
+        return default
+
+
+def ui_colours(scheme=None):
+    """Window background, normal text and text-on-selection of the colour scheme in use."""
+    scheme = scheme or current_scheme()
+    return (_kde("Colors:Window", "BackgroundNormal", UI_BG, scheme), _kde("Colors:Window", "ForegroundNormal", UI_TEXT, scheme),
+            _kde("Colors:Selection", "ForegroundNormal", UI_DARK_TEXT, scheme))
+
+
+def accent_family(path, ui=None):
     """accent: cursor, highlights, active borders; tint: selection and current-tab background;
-    soft: text on the tint (tab numbers). All share the photograph's hue."""
-    import math
+    soft: text on the tint (tab numbers). All share the photograph's hue. `ui` is (window,
+    text, text on selection) of the colour scheme the accent has to work in."""
+    bg, text, sel_text = ui or (UI_BG, UI_TEXT, UI_DARK_TEXT)
+    dark = _contrast(bg, "#000000") < _contrast(bg, "#ffffff")
     seed = pick_seed(path)
     if seed is None:
-        return {"accent": DEFAULT_ACCENT, "tint": "#223f44", "soft": "#81e6d9"}
-    h, C = seed
-    C = min(max(C, 0.10), 0.16) if C >= 0.045 else C       # vivid but not neon; grey photos stay muted
-    # accent: light enough for 6:1 on the window and for dark text on it (Summit selection text)
-    L = 0.74
-    acc = _oklch_hex(L, C, h)
-    while (_contrast(acc, UI_BG) < 6.0 or _contrast(acc, UI_DARK_TEXT) < 7.0) and L < 0.95:
-        L += 0.01; acc = _oklch_hex(L, C, h)
+        h, C = 3.30, 0.115                                  # Summit teal, for grey photographs
+    else:
+        h, C = seed
+        C = min(max(C, 0.10), 0.16) if C >= 0.045 else C   # vivid but not neon; grey photos stay muted
+    # accent: text on a selection must stay readable (4.5:1, WCAG AA), and the accent must stand out
+    # from the window (6:1 when it can be light, as on Summit; else the 3:1 WCAG asks of controls).
+    # Of the lightness levels that pass both, the one nearest to what suits the scheme is used.
+    sel_dark = _contrast(sel_text, "#000000") < _contrast(sel_text, "#ffffff")
+    need = 6.0 if (dark and sel_dark) else 3.0
+    prefer = 0.74 if (dark and sel_dark) else (0.58 if dark else 0.52)
+    levels = [round(0.25 + k * 0.01, 2) for k in range(71)]
+    scored = []
+    for L in levels:
+        c = _oklch_hex(L, C, h)
+        a, b = _contrast(c, sel_text), _contrast(c, bg)
+        scored.append((a >= 4.5 and b >= need, -abs(L - prefer), min(a / 4.5, b / need), c))
+    good = [x for x in scored if x[0]]
+    acc = max(good, key=lambda x: x[1])[3] if good else max(scored, key=lambda x: x[2])[3]
     # tint: a dark wash of the hue that normal text stays readable on (at least 8:1)
     Lt = 0.35
     tint = _oklch_hex(Lt, min(0.07, C * 0.5), h)
@@ -258,11 +327,22 @@ def mix(a, b, t):
     return "#%02x%02x%02x" % tuple(round(x + (y - x) * t) for x, y in zip(pa, pb))
 
 
-def apply_accent(path):
-    """Use the wallpaper's colour as the accent: Plasma (task bar, highlights, buttons) and kitty
-    (cursor, current tab, active split border, scrollbar). Running kitty windows reload at once."""
-    fam = accent_family(path)
-    acc, tint, light = fam["accent"], fam["tint"], fam["soft"]
+def current_scheme():
+    r = subprocess.run(["plasma-apply-colorscheme", "--list-schemes"], capture_output=True, text=True)
+    for line in r.stdout.splitlines():
+        if "(current color scheme)" in line:
+            return line.strip(" *").replace("(current color scheme)", "").strip()
+    return "BreezeLight"
+
+
+def kitty_uses_accent():
+    try:
+        return any(l.strip() == "include accent.conf" for l in open(KITTY_CONF))
+    except OSError:
+        return False
+
+
+def write_kitty(acc, tint, light):
     kitty = f"""# Written by `wall` from the current wallpaper. Do not edit: the next wallpaper replaces it.
 cursor                  {acc}
 active_border_color     {acc}
@@ -271,14 +351,55 @@ active_tab_background   {tint}
 scrollbar_handle_color  {acc}
 active_tab_title_template "{{fmt.bg.default}}{{fmt.fg._{tint[1:]}}}\ue0b6{{fmt.bg._{tint[1:]}}}{{fmt.fg._{light[1:]}}}{{index}}{{fmt.fg._f0f4f8}} {{custom}}{{fmt.bg.default}}{{fmt.fg._{tint[1:]}}}\ue0b4"
 """
-    os.makedirs(os.path.dirname(KITTY_ACCENT), exist_ok=True)
     with open(KITTY_ACCENT + ".tmp", "w") as f:
         f.write(kitty)
     os.replace(KITTY_ACCENT + ".tmp", KITTY_ACCENT)
     subprocess.run(["pkill", "-USR1", "-x", "kitty"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    subprocess.run(["plasma-apply-colorscheme", "Summit", "--accent-color", acc],
+
+
+def apply_accent(path):
+    """Use the wallpaper's colour as the accent of the colour scheme in use (task bar, highlights,
+    buttons) and, when kitty's config includes accent.conf, of kitty (cursor, current tab, active
+    split border, scrollbar). Running kitty windows reload at once."""
+    scheme = current_scheme()
+    fam = accent_family(path, ui_colours(scheme))
+    if kitty_uses_accent():
+        write_kitty(fam["accent"], fam["tint"], fam["soft"])
+    subprocess.run(["plasma-apply-colorscheme", scheme, "--accent-color", fam["accent"]],
                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    return acc
+    return fam["accent"]
+
+
+def reset_accent():
+    """Put the colour scheme back exactly as it ships. plasma-apply-colorscheme will not re-apply the
+    scheme that is already set, so the name is cleared first; the scheme is then applied whole."""
+    scheme = current_scheme()
+    if kitty_uses_accent():
+        write_kitty(DEFAULT_ACCENT, "#223f44", "#81e6d9")
+    subprocess.run(["kwriteconfig6", "--file", "kdeglobals", "--group", "General", "--key", "ColorScheme", "--delete"],
+                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    subprocess.run(["kwriteconfig6", "--file", "kdeglobals", "--group", "General", "--key", "ColorSchemeHash", "--delete"],
+                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    r = subprocess.run(["plasma-apply-colorscheme", scheme], capture_output=True, text=True)
+    if "already set" in r.stdout + r.stderr:      # the default scheme: clearing the name changed nothing
+        other = "BreezeClassic" if scheme != "BreezeClassic" else "BreezeLight"
+        subprocess.run(["plasma-apply-colorscheme", other], capture_output=True)
+        subprocess.run(["plasma-apply-colorscheme", scheme], capture_output=True)
+    return scheme_value(scheme, "Colors:Selection", "BackgroundNormal") or DEFAULT_ACCENT
+
+
+def after_switch(path):
+    """Runs in the background after a switch: the welcome card's picture and the accent."""
+    if os.path.exists(WELCOME):
+        try:
+            make_card(path)
+        except ImportError:
+            pass
+    if os.path.exists(ACCENT_FLAG):
+        try:
+            apply_accent(path)
+        except ImportError:
+            pass
 
 
 def apply(path):
@@ -296,9 +417,10 @@ def apply(path):
     with open(STATE + ".tmp", "w") as f:
         f.write(path + "\n")
     os.replace(STATE + ".tmp", STATE)
-    # the welcome card's picture follows too (in the background: it takes longer than the switch itself)
-    subprocess.Popen([sys.executable, os.path.abspath(__file__), "card+accent", path],
-                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+    # the welcome card's picture and the accent follow (in the background: slower than the switch)
+    if os.path.exists(WELCOME) or os.path.exists(ACCENT_FLAG):
+        subprocess.Popen([sys.executable, os.path.abspath(__file__), "after-switch", path],
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
     return path
 
 
@@ -403,6 +525,16 @@ def fetch(n, words):
     return got
 
 
+def needs_pillow(fn):
+    """Thumbnails, the accent and the welcome card need Pillow; say so plainly when it is missing."""
+    try:
+        fn()
+    except ImportError:
+        print("wall: this needs Python's Pillow library (Fedora: python3-pillow, Debian/Ubuntu: "
+              "python3-pil, Arch: python-pillow)", file=sys.stderr)
+        sys.exit(3)
+
+
 def main(argv):
     cmd = argv[0] if argv else "help"
     if cmd == "next":
@@ -422,23 +554,35 @@ def main(argv):
         cur = current()
         for p in library():
             print(("* " if p == cur else "  ") + p)
-    elif cmd == "card+accent" and len(argv) > 1:      # run in the background after a switch
-        make_card(argv[1])
-        apply_accent(argv[1])
+    elif cmd in ("after-switch", "card+accent") and len(argv) > 1:   # background step after a switch
+        after_switch(argv[1])
     elif cmd == "accent":
-        path = argv[1] if len(argv) > 1 else current()
-        if not path or not os.path.isfile(path):
-            sys.exit("wall: no current wallpaper to take the colour from")
-        print(apply_accent(path))
+        sub = argv[1] if len(argv) > 1 else "now"
+        if sub == "status":
+            print("on" if os.path.exists(ACCENT_FLAG) else "off")
+        elif sub == "off":
+            if os.path.exists(ACCENT_FLAG):
+                os.remove(ACCENT_FLAG)
+            print(reset_accent())
+        else:
+            if sub == "on":
+                os.makedirs(os.path.dirname(ACCENT_FLAG), exist_ok=True)
+                open(ACCENT_FLAG, "a").close()
+            path = argv[2] if sub == "now" and len(argv) > 2 else (sub if sub not in ("on", "now") else current())
+            if not path or not os.path.isfile(path):
+                sys.exit("wall: no current wallpaper to take the colour from")
+            needs_pillow(lambda: print(apply_accent(path)))
     elif cmd == "card":
         path = argv[1] if len(argv) > 1 else current()
         if not path or not os.path.isfile(path):
             sys.exit("wall: no current wallpaper to draw the card from")
-        print(make_card(path))
+        needs_pillow(lambda: print(make_card(path)))
     elif cmd == "thumbs":
-        for p in library():
-            make_thumb(p, force="--force" in argv)
-        print(f"{len(library())} thumbnails in {THUMBS}")
+        def thumbs():
+            for p in library():
+                make_thumb(p, force="--force" in argv)
+            print(f"{len(library())} thumbnails in {THUMBS}")
+        needs_pillow(thumbs)
     elif cmd == "add" and len(argv) > 1:
         args = [a for a in argv[1:] if not a.startswith("--")]
         use, replace = "--use" in argv, "--replace" in argv

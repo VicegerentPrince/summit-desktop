@@ -1,13 +1,26 @@
 {
     "KPackageStructure": "Plasma/Applet",
     "KPlugin": {
-        "Id": "summit.vitals",
-        "Name": "Vitals",
-        "Description": "CPU, memory, disk, network, temperature and battery on a glass card",
-        "Icon": "utilities-system-monitor",
+        "Authors": [
+            {
+                "Name": "Muhammad Muneeb",
+                "Website": "https://github.com/VicegerentPrince"
+            },
+            {
+                "Name": "Jack Faith (jaxparrow07), Liquid Glass",
+                "Website": "https://github.com/jaxparrow07/liquidglass-kde-widgets"
+            }
+        ],
+        "BugReportUrl": "https://github.com/VicegerentPrince/summit-desktop/issues",
         "Category": "System Information",
+        "Description": "CPU, memory, free disk, network, temperature and battery on a Liquid Glass card",
+        "EnabledByDefault": true,
+        "Icon": "utilities-system-monitor",
+        "Id": "summit.vitals",
         "License": "GPL-3.0",
-        "Version": "1.0"
+        "Name": "Summit Vitals",
+        "Version": "1.0.0",
+        "Website": "https://github.com/VicegerentPrince/summit-desktop"
     },
     "X-Plasma-API-Minimum-Version": "6.0"
 }

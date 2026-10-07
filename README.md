@@ -40,7 +40,21 @@ re-runnable, and measured: a new terminal shows its prompt in about 5 ms.
 - atuin writes through its daemon (6 ms instead of up to 80 ms per command).
 - mise's per-prompt check stays on its fast path (2 ms instead of 10 ms).
 
-## Install
+## Just the pieces, from the KDE Store
+
+Each of these installs from Plasma's own "Get New…" buttons and works without the rest of the setup:
+
+| | where in Plasma |
+|---|---|
+| **Summit Vitals**, **Summit Claude Usage** | right-click desktop › Add Widgets › Get New Widgets |
+| **Summit Wallpapers** (panel gallery, accent from wallpaper) | the same, then add it to your panel |
+| **Summit** colour scheme | System Settings › Colours › Get New |
+| **Summit Glass** Plasma style | System Settings › Plasma Style › Get New |
+
+Search for "Summit" in those dialogs. The files are also attached to each
+[GitHub release](https://github.com/VicegerentPrince/summit-desktop/releases), and `store/build.sh` builds them.
+
+## Install the whole setup
 
 Fedora 44, KDE Plasma 6.7, Wayland. Other distributions should work with their own package names,
 but have not been tested.
@@ -74,6 +88,7 @@ Every file the installer would overwrite is first copied to `~/.local/state/summ
 |---|---|
 | `wall next` / `prev` / `random` | switch wallpaper (desktop, lock screen, accent, welcome card) |
 | `wall fetch -n 8 aurora` | download more photos from Wallhaven |
+| `wall accent on` / `off` | let the accent follow the wallpaper, or put your scheme's own back |
 | `wall accent` | re-pick the accent after changing the wallpaper some other way |
 | `welcome` | show the welcome card again |
 | `keys` | every shortcut on one page |
@@ -87,7 +102,8 @@ Every file the installer would overwrite is first copied to `~/.local/state/summ
 | `home/` | dotfiles, installed to the same paths under `~` |
 | `look/` | colour scheme, icons, cursor, fonts |
 | `plasma-style/` | the Summit Glass panel |
-| `widgets/`, `widgets-panel/` | the widgets and the patches to Liquid Glass |
+| `widgets/`, `widgets-panel/` | the widgets (`assemble.sh` builds them) and the patches to Liquid Glass |
+| `store/` | `build.sh` for the KDE Store files, the listings (`STORE.md`) and their images |
 | `tools/`, `syntax/` | themes for the CLI tools and editors |
 | `vscode/` | the VS Code / Cursor theme and the scripts that build and check it |
 | `extras/` | optional, hardware-specific fixes (a WirePlumber rule for the Redragon GM303 microphone) |
@@ -103,7 +119,10 @@ placeholder takes the glass colour.
 
 ## Credits and licence
 
-- Liquid Glass widgets by [jaxparrow07](https://github.com/jaxparrow07/liquidglass-kde-widgets), GPL-3.0.
+- **Liquid Glass** by Jack Faith ([jaxparrow07](https://github.com/jaxparrow07/liquidglass-kde-widgets)), GPL-3.0:
+  the clock, calendar, weather and music widgets, and the glass effect that Vitals and Claude
+  Usage are drawn with. His widgets are also on the KDE Store. If you like the look, support him on
+  [Ko-fi](https://ko-fi.com/devrinth).
 - Wallpapers are not included; `wall` downloads them from [Wallhaven](https://wallhaven.cc), where
   each photo belongs to its author.
 - Breeze (the base of Summit Glass) by the KDE Visual Design Group.
