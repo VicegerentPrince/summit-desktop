@@ -7,7 +7,8 @@ the pictures are in `store/images/`.
 The same for every product:
 - **Version:** `1.0.0`
 - **Link to Source/Code** and **Link to your product homepage:** https://github.com/VicegerentPrince/summit-desktop
-- **Product Logo:** `summit-logo.png`
+- **Product Logo:** a picture of the product, listed for each one below. The store shows the logo as the
+  first picture, and Plasma's "Get New" windows use it as the thumbnail.
 - **Plasma version**, wherever the form asks: 6
 - **Credit for CC-BY licenses**, Facebook, X: leave empty
 
@@ -28,7 +29,9 @@ stays blank.
 - **Original or Modification:** Original
 - **Licence:** GPLv3
 - **Tags:** plasma6, dotfiles, kitty, zsh, glass, wallpaper, fedora
-- **Pictures** (the first is the cover): summit-desktop.jpg, summit-terminal.png, glass-panel-before-after.png, wallpapers-gallery.png
+- **Store page:** https://store.kde.org/p/2377643
+- **Logo:** summit-desktop.jpg
+- **Pictures:** summit-terminal.png, glass-panel-before-after.png, wallpapers-gallery.png
 
 **Description:**
 
@@ -68,7 +71,8 @@ Source and issues: https://github.com/VicegerentPrince/summit-desktop
 - **Original or Modification:** Modification
 - **Licence:** GPLv3
 - **Tags:** plasma6, widget, plasmoid, system-monitor, cpu, temperature, glass
-- **Pictures** (the first is the cover): vitals-card.png, widgets-on-desktop.jpg
+- **Logo:** vitals-card.png
+- **Pictures:** widgets-on-desktop.jpg
 
 **Description:**
 
@@ -91,7 +95,8 @@ The glass is Liquid Glass by Jack Faith (jaxparrow07), used under GPL-3.0: https
 - **Original or Modification:** Modification
 - **Licence:** GPLv3
 - **Tags:** plasma6, widget, plasmoid, claude, claude-code, glass
-- **Pictures** (the first is the cover): claude-card.png, widgets-on-desktop.jpg
+- **Logo:** claude-card.png
+- **Pictures:** widgets-on-desktop.jpg
 
 **Description:**
 
@@ -114,7 +119,8 @@ Not affiliated with or endorsed by Anthropic. The glass is Liquid Glass by Jack 
 - **Original or Modification:** Original
 - **Licence:** GPLv3
 - **Tags:** plasma6, widget, plasmoid, wallpaper, wallhaven, panel
-- **Pictures** (the first is the cover): wallpapers-gallery.png, summit-desktop.jpg
+- **Logo:** wallpapers-gallery.png
+- **Pictures:** summit-desktop.jpg
 
 **Description:**
 
@@ -139,7 +145,8 @@ Needs Python 3 with Pillow (Fedora: python3-pillow, Debian/Ubuntu: python3-pil, 
 - **Original or Modification:** Original
 - **Licence:** GPLv3
 - **Tags:** colorscheme, dark, teal, graphite
-- **Pictures** (the first is the cover): colours-settings.png, summit-desktop.jpg
+- **Logo:** colours-settings.png
+- **Pictures:** summit-desktop.jpg
 
 **Description:**
 
@@ -156,7 +163,8 @@ A cool, low-glare dark scheme: graphite surfaces (#171c23, #1d232c, #28313d), so
 - **Original or Modification:** leave blank
 - **Licence:** LGPLv2
 - **Tags:** plasma-style, glass, translucent, blur, panel, breeze
-- **Pictures** (the first is the cover): glass-panel-before-after.png, summit-desktop.jpg
+- **Logo:** summit-glass-cover.jpg
+- **Pictures:** glass-panel-before-after.png, summit-desktop.jpg
 
 **Description:**
 
