@@ -20,7 +20,8 @@ The library is ~/Pictures/Wallpapers: drop any image in there and it shows up in
 Resolution: only images at least as large as your largest connected screen are requested, and
 never less than 4K, so the library stays sharp when you plug in a bigger monitor. Anything larger
 than that is scaled down to it on arrival, to keep files and memory reasonable.
-Only safe-for-work results from Wallhaven's "General" category are requested. `wall fetch` also
+Only safe-for-work results are requested: Wallhaven's "General" category, plus "Anime" when you
+give search words (wall fetch gojo), with fan-service tags left out. `wall fetch` also
 skips pictures that are bright behind the desktop widgets, so the glass cards stay readable.
 """
 import json, os, random, subprocess, sys, time, urllib.parse, urllib.request
@@ -496,18 +497,23 @@ def download(item, size=None, replace=False):
     return out
 
 
+# Anime is only searched together with these left out: "safe for work" is set by hand on Wallhaven,
+# and fan service sometimes slips through it (the panel widget uses the same list)
+CLEAN = '-ecchi -nude -lingerie -underwear -panties -bikini -swimwear -cleavage -"big boobs" -thighs -"thigh-highs" -stockings -pantyhose -"bare shoulders"'
+
+
 def fetch(n, words):
     size = target_size()
     have = {os.path.basename(p) for p in library()}
-    queries = [" ".join(words)] if words else random.sample(DEFAULT_QUERIES, len(DEFAULT_QUERIES))
+    queries = [" ".join(words) + " " + CLEAN] if words else random.sample(DEFAULT_QUERIES, len(DEFAULT_QUERIES))
     got = 0
     for q in queries:
-        for page in (1, 2, 3):
+        for page in range(1, 11):
             if got >= n:
                 return got
             d = get(f"{API}/search?" + urllib.parse.urlencode({
-                "q": q, "categories": "100", "purity": "100", "atleast": f"{size[0]}x{size[1]}",
-                "ratios": "16x9,16x10", "sorting": "toplist", "topRange": "1y", "page": page}))
+                "q": q, "categories": "110" if words else "100", "purity": "100", "atleast": f"{size[0]}x{size[1]}",
+                "ratios": "16x9,16x10", "sorting": "favorites", "order": "desc", "page": page}))
             if not d or not d.get("data"):
                 break
             for item in d["data"]:

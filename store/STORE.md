@@ -129,7 +129,7 @@ A wallpaper gallery for the panel: your library plus endless top-rated Wallhaven
 
 Click the panel icon for a gallery of ~/Pictures/Wallpapers; click a picture to use it on the desktop and lock screen. Scroll on the icon to step through the library without opening anything, middle-click for a random one.
 
-Discover tab: top-rated photos from Wallhaven by topic (Mountains, Night sky, Forest, Aurora, Space and more) or by search, loading more as you scroll. Pictures are requested at least at your largest screen's resolution (and never below 4K), so they stay sharp on a bigger monitor. Only the safe-for-work General category is used.
+Discover tab: top-rated photos from Wallhaven by topic (Mountains, Night sky, Forest, Aurora, Space and more) or by search, loading more as you scroll. Pictures are requested at least at your largest screen's resolution (and never below 4K), so they stay sharp on a bigger monitor. Only safe-for-work pictures are requested: the General category, plus Anime for your own searches, with fan-service tags left out.
 
 Optional: let the accent colour follow each wallpaper (Configure › General). The colour is picked in a perceptual colour space, scored like Android's Material You and checked for WCAG AA contrast in your colour scheme; turning it off restores your scheme exactly.
 

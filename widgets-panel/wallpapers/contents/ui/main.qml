@@ -284,6 +284,10 @@ PlasmoidItem {
 
             ListModel { id: results }
 
+            // Anime is only searched together with these left out: "safe for work" is set by hand on
+            // Wallhaven, and fan service sometimes slips through it
+            readonly property string clean: '-ecchi -nude -lingerie -underwear -panties -bikini -swimwear -cleavage -"big boobs" -thighs -"thigh-highs" -stockings -pantyhose -"bare shoulders"'
+
             function load(q, isCustom) {
                 query = q; custom = isCustom; page = 0; lastPage = 1; failed = false
                 results.clear()
@@ -293,10 +297,14 @@ PlasmoidItem {
                 if (query === "" || loading || page >= lastPage) return
                 loading = true
                 const asked = query, wasCustom = custom, next = page + 1
-                const url = "https://wallhaven.cc/api/v1/search?q=" + encodeURIComponent(asked)
-                    + "&categories=100&purity=100&ratios=16x9,16x10"
+                const url = "https://wallhaven.cc/api/v1/search?q="
+                    + encodeURIComponent(wasCustom ? asked + " " + clean : asked)
+                    // a typed search also covers Anime (a search for Gojo found 2 in General alone);
+                    // the topics stay with General photographs. Safe for work either way.
+                    + "&categories=" + (wasCustom ? "110" : "100") + "&purity=100&ratios=16x9,16x10"
                     + "&atleast=" + root.wanted.width + "x" + root.wanted.height
-                    + (wasCustom ? "&sorting=favorites&order=desc" : "&sorting=toplist&topRange=1y")
+                    // all-time favourites: a year's toplist ran out after a few pages (Aurora had 13)
+                    + "&sorting=favorites&order=desc"
                     + "&page=" + next
                 const xhr = new XMLHttpRequest()
                 xhr.onreadystatechange = function () {
@@ -377,7 +385,7 @@ PlasmoidItem {
         }
 
         // ---- topics (Discover only) ------------------------------------------------------------
-        Row {
+        Flow {
             id: topics
             anchors.top: header.bottom
             anchors.left: parent.left
@@ -390,13 +398,18 @@ PlasmoidItem {
             spacing: Kirigami.Units.smallSpacing
 
             Repeater {
-                model: ["Mountains", "Night sky", "Forest", "Lakes", "Aurora", "Ocean", "Desert", "City lights", "Minimal", "Space"]
+                // label, then the Wallhaven search behind it (the singular finds more)
+                model: [["Mountains", "mountains"], ["Night sky", "night sky"], ["Forest", "forest"],
+                        ["Lakes", "lake"], ["Aurora", "aurora"], ["Ocean", "ocean"], ["Desert", "desert"],
+                        ["Snow", "snow"], ["Waterfalls", "waterfall"], ["Sunset", "sunset"],
+                        ["Clouds", "clouds"], ["Landscape", "landscape"], ["City lights", "city lights"],
+                        ["Minimal", "minimal"], ["Space", "space"]]
                 PlasmaComponents.ToolButton {
-                    required property string modelData
-                    text: modelData
+                    required property var modelData
+                    text: modelData[0]
                     checkable: true
-                    checked: discover.query === modelData.toLowerCase() && !discover.custom
-                    onClicked: { search.text = ""; discover.load(modelData.toLowerCase(), false) }
+                    checked: discover.query === modelData[1] && !discover.custom
+                    onClicked: { search.text = ""; discover.load(modelData[1], false) }
                 }
             }
         }
