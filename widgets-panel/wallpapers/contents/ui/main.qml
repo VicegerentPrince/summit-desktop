@@ -278,6 +278,13 @@ PlasmoidItem {
             property int lastPage: 1
             property bool loading: false
             property bool failed: false
+            // When a search runs out, "Load more" widens it: all-time favourites first, then the
+            // most viewed, then random picks (endless). Ids already shown are skipped.
+            property int stage: 0
+            readonly property var stages: ["favorites", "views", "random"]
+            readonly property bool exhausted: !loading && !failed && page >= lastPage && results.count > 0
+            property var seen: ({})
+            property string seed: ""
             readonly property string status: failed ? "No connection"
                 : loading && results.count === 0 ? "Loading…"
                 : results.count + " shown · " + root.wanted.width + "×" + root.wanted.height + " or larger"
@@ -290,13 +297,21 @@ PlasmoidItem {
 
             function load(q, isCustom) {
                 query = q; custom = isCustom; page = 0; lastPage = 1; failed = false
+                stage = 0; seen = ({})
                 results.clear()
+                more()
+            }
+            function widen() {
+                if (loading) return
+                stage = Math.min(stage + 1, stages.length - 1)
+                seed = Math.random().toString(36).slice(2, 8)
+                page = 0; lastPage = 1
                 more()
             }
             function more() {
                 if (query === "" || loading || page >= lastPage) return
                 loading = true
-                const asked = query, wasCustom = custom, next = page + 1
+                const asked = query, wasCustom = custom, next = page + 1, sort = stages[stage]
                 const url = "https://wallhaven.cc/api/v1/search?q="
                     + encodeURIComponent(wasCustom ? asked + " " + clean : asked)
                     // a typed search also covers Anime (a search for Gojo found 2 in General alone);
@@ -304,25 +319,32 @@ PlasmoidItem {
                     + "&categories=" + (wasCustom ? "110" : "100") + "&purity=100&ratios=16x9,16x10"
                     + "&atleast=" + root.wanted.width + "x" + root.wanted.height
                     // all-time favourites: a year's toplist ran out after a few pages (Aurora had 13)
-                    + "&sorting=favorites&order=desc"
+                    + (sort === "random" ? "&sorting=random&seed=" + discover.seed : "&sorting=" + sort + "&order=desc")
                     + "&page=" + next
                 const xhr = new XMLHttpRequest()
                 xhr.onreadystatechange = function () {
                     if (xhr.readyState !== XMLHttpRequest.DONE) return
                     discover.loading = false
                     // the topic changed while this was in flight: drop it and load the new one
-                    if (asked !== discover.query || wasCustom !== discover.custom) { discover.more(); return }
+                    if (asked !== discover.query || wasCustom !== discover.custom || sort !== discover.stages[discover.stage]) { discover.more(); return }
                     if (xhr.status !== 200) { discover.failed = true; return }
                     let d
                     try { d = JSON.parse(xhr.responseText) } catch (e) { discover.failed = true; return }
                     discover.failed = false
                     discover.page = next
                     discover.lastPage = (d.meta && d.meta.last_page) || next
+                    const seen = Object.assign({}, discover.seen)
+                    let added = 0
                     for (const w of d.data) {
+                        if (seen[w.id]) continue
+                        seen[w.id] = true; added++
                         const px = w.dimension_x || 0
                         results.append({ wid: w.id, thumb: w.thumbs.small,
                                          label: px >= 7680 ? "8K" : px >= 5120 ? "5K" : px >= 3840 ? "4K" : px >= 2560 ? "QHD" : "" })
                     }
+                    discover.seen = seen
+                    // a page of nothing but repeats: keep going so the grid actually grows
+                    if (added === 0 && discover.page < discover.lastPage) discover.more()
                 }
                 xhr.open("GET", url)
                 xhr.timeout = 20000      // must be set after open()
@@ -481,6 +503,23 @@ PlasmoidItem {
                     // load the next page a little before the end is reached
                     onContentYChanged: if (contentY + height > contentHeight - 2 * cellHeight) discover.more()
                     onCountChanged: if (contentHeight <= height) discover.more()
+
+                    footer: Item {
+                        width: remote.width
+                        height: results.count > 0 ? Kirigami.Units.gridUnit * 3 : 0   // fixed: a changing footer would move the scroll position
+                        PlasmaComponents.Button {
+                            anchors.centerIn: parent
+                            visible: discover.exhausted
+                            icon.name: "view-more-symbolic"
+                            text: discover.stage < discover.stages.length - 1 ? "Load more" : "Load more random picks"
+                            onClicked: discover.widen()
+                        }
+                        PlasmaComponents.BusyIndicator {
+                            anchors.centerIn: parent
+                            visible: discover.loading && results.count > 0
+                            running: visible
+                        }
+                    }
 
                     delegate: Card {
                         required property string wid
