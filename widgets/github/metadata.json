@@ -1,0 +1,13 @@
+{
+    "KPackageStructure": "Plasma/Applet",
+    "KPlugin": {
+        "Id": "summit.github",
+        "Name": "GitHub",
+        "Description": "Builds of the repositories you pushed to last, your open pull requests with their checks, reviews asked of you and the notifications about you. Uses your GitHub CLI login.",
+        "Icon": "github",
+        "Category": "Online Services",
+        "License": "GPL-3.0",
+        "Version": "1.0"
+    },
+    "X-Plasma-API-Minimum-Version": "6.0"
+}

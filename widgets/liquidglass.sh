@@ -61,6 +61,7 @@ for p in $PKGS; do
         rm -f "$F"/ios_*.otf
     fi
     python3 "$(dirname "${BASH_SOURCE[0]}")/patch_glass.py" "$DEST/$id/contents/ui/components/LiquidGlass.qml" || warn "glass fix: $id"
+    python3 "$(dirname "${BASH_SOURCE[0]}")/glass/true_glass.py" "$DEST/$id/contents/ui/components/LiquidGlass.qml" || warn "true glass: $id"
     grep -rlZ 'Font\.Regular' "$DEST/$id/contents/ui" --include='*.qml' | xargs -0 -r sed -i 's/Font\.Regular/Font.Normal/g'
     f="$DEST/$id/contents/ui/widget/MarqueeText.qml"
     [ -f "$f" ] && sed -i 's/? (label\.implicitWidth - marquee\.width) \* marquee\.scrollSpeed$/? Math.max(0, (label.implicitWidth - marquee.width) * marquee.scrollSpeed)/' "$f"
@@ -109,3 +110,27 @@ patch_file "$U" "music: play/pause works for remote (KDE Connect) players" \
 # "no album" placeholder that takes the wallpaper's colour instead of an opaque grey square
 cp "$(dirname "${BASH_SOURCE[0]}")/assets/no_album.png" "$DEST/com.jaxparrow07.macoswidgets.music/contents/ui/icons/no_album.png" && ok "music: adaptive no-album placeholder"
 echo "Installed into $DEST. A running plasmashell loads changed widgets after it restarts."
+
+# Timer presets: the ones a working day uses, most used first (four fit without scrolling).
+patch_file "$DEST/com.jaxparrow07.macoswidgets.timer/contents/ui/main.qml" "timer: presets for focus and breaks" \
+'        ListElement { label: "1 min";  mins: 1;  secs: 0; pillColor: "#4ECDC4" }
+        ListElement { label: "2 min";  mins: 2;  secs: 0; pillColor: "#45B7D1" }
+        ListElement { label: "3 min";  mins: 3;  secs: 0; pillColor: "#96CEB4" }
+        ListElement { label: "5 min";  mins: 5;  secs: 0; pillColor: "#FF6B6B" }
+        ListElement { label: "10 min"; mins: 10; secs: 0; pillColor: "#DDA0DD" }
+        ListElement { label: "15 min"; mins: 15; secs: 0; pillColor: "#FFB347" }' \
+'        ListElement { label: "25 min focus"; mins: 25; secs: 0; pillColor: "#FF6B6B" }
+        ListElement { label: "5 min break";  mins: 5;  secs: 0; pillColor: "#4ECDC4" }
+        ListElement { label: "15 min";       mins: 15; secs: 0; pillColor: "#FFB347" }
+        ListElement { label: "45 min";       mins: 45; secs: 0; pillColor: "#DDA0DD" }
+        ListElement { label: "10 min";       mins: 10; secs: 0; pillColor: "#45B7D1" }
+        ListElement { label: "2 min";        mins: 2;  secs: 0; pillColor: "#96CEB4" }'
+
+# Timer: a finished countdown flashes for eight seconds instead of until someone clicks it. Every
+# animated frame redraws the desktop, so an endless 60 fps flash costs about a quarter of a core.
+T=$DEST/com.jaxparrow07.macoswidgets.timer/contents/ui
+for f in "$T/main.qml" "$T/widget/CountdownDisplay.qml"; do
+    [ -f "$f" ] && sed -i 's/loops: Animation\.Infinite/loops: 8/' "$f"
+done
+grep -q 'Animation.Infinite' "$T/main.qml" "$T/widget/CountdownDisplay.qml" 2>/dev/null && warn "timer flash cap" || ok "timer: finished flash stops after eight seconds"
+

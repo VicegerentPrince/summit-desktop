@@ -133,8 +133,11 @@ fi
 TLDR=$HOME/.local/share/mise/installs/tealdeer/latest/tldr
 [[ -x $TLDR && ! -d $HOME/.cache/tealdeer/tldr-pages ]] && "$TLDR" --update 2>&1 | tail -1 | sed 's/^/  /'
 
+say "9. screens (a panel on the second screen, colour range of HDMI monitors)"
+bash "$HERE/screens/apply-screens.sh" | sed 's/^/  /'
+
 if [[ ${1:-} == --layout ]]; then
-  say "9. desktop widget layout"
+  say "10. desktop widget layout"
   bash "$HERE/widgets/apply-layout.sh" | sed 's/^/  /'
 fi
 

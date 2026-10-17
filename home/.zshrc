@@ -203,7 +203,9 @@ if _cached_init atuin atuin init zsh --disable-up-arrow; then
 fi
 
 # ---- aliases and small functions ----------------------------------------------------------------
-if (( $+commands[eza] )); then
+# eza lists the names it reads from stdin whenever stdin is not a terminal, so a bare `ls` in a pipe or
+# in an agent's shell (stdin an open socket or /dev/null) would hang or print nothing. eza on terminals only.
+if (( $+commands[eza] )) && [[ -t 0 ]]; then
   alias ls='eza --icons=auto --group-directories-first'
   alias ll='eza -l --icons=auto --group-directories-first --git --time-style=relative'
   alias la='eza -la --icons=auto --group-directories-first --git --time-style=relative'

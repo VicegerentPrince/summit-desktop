@@ -10,17 +10,30 @@ re-runnable, and measured: a new terminal shows its prompt in about 5 ms.
 ## What you get
 
 **Desktop**
-- Glass widgets: clock, calendar, weather and music from [Liquid Glass](https://github.com/jaxparrow07/liquidglass-kde-widgets)
-  (with fixes, see below), plus three new ones in the same style:
+- Glass widgets: clock, calendar, weather, music and a focus timer from [Liquid Glass](https://github.com/jaxparrow07/liquidglass-kde-widgets)
+  (with fixes, see below), plus new ones in the same style:
   - **Vitals**: CPU, memory, free disk, network, temperature and battery;
   - **Claude Usage**: your Claude Code 5-hour and weekly limits (needs the status line below);
+  - **Projects**: the git projects you worked in last, with uncommitted changes and commits not
+    pushed yet; click for a terminal there, or open it in VS Code;
+  - **GitHub**: builds of the repositories you pushed to last, your open pull requests with their
+    checks, and the notifications that are about you (uses your `gh` login; works offline from cache);
   - **Wallpapers** (panel): a gallery of your library plus a *Discover* tab that keeps loading
     top-rated photos from Wallhaven at your screen's resolution (4K minimum). Scroll on the icon to
     cycle wallpapers, middle-click for a random one.
 - **Accent colour follows the wallpaper.** Each switch picks a colour from the photo (OKLab k-means,
   scored like Material You, checked for WCAG contrast against the interface) and applies it to
   Plasma and to kitty.
+- **Liquid Glass, Apple-style**: every card is a thick glass slab. The rim is a clear lens that bends
+  the wallpaper, the middle is frosted and keeps its colour, light catches the top-left and
+  bottom-right edges, and a soft shadow lifts the card. The tint deepens only over bright
+  wallpapers, so white text stays readable. It costs nothing at rest (measured).
 - **Summit Glass** Plasma style: the stock style with a see-through, blurred panel.
+- **Second screen.** Plug in a monitor and it becomes the main screen with the full panel and the
+  widgets; the laptop gets a matching panel with the launcher, the windows on that screen and a
+  clock, and its own work set: Projects, GitHub and the focus timer. Unplug and the laptop has the full desktop again, nothing to re-run. HDMI monitors that
+  accept it get full-range colour instead of the TV range Plasma picks by default
+  (`screens/black-level.png` shows the difference).
 - Summit colour scheme (slate graphite, teal), Papirus icons with teal folders, Bibata cursor, Inter
   and JetBrains Mono.
 
@@ -102,6 +115,7 @@ Every file the installer would overwrite is first copied to `~/.local/state/summ
 | `home/` | dotfiles, installed to the same paths under `~` |
 | `look/` | colour scheme, icons, cursor, fonts |
 | `plasma-style/` | the Summit Glass panel |
+| `screens/` | the second-screen panel, full RGB range for HDMI monitors, a black-level test image |
 | `widgets/`, `widgets-panel/` | the widgets (`assemble.sh` builds them) and the patches to Liquid Glass |
 | `store/` | `build.sh` for the KDE Store files, the listings (`STORE.md`) and their images |
 | `tools/`, `syntax/` | themes for the CLI tools and editors |
@@ -115,10 +129,14 @@ the clock redraws once a second instead of 60 times (it used 23% of a CPU core);
 updates once a second, fetches lyrics only when shown, and its play/pause works with KDE Connect
 players; the glass no longer turns black after a shell restart or goes stale when the wallpaper
 changes; a few QML warnings fixed; Inter replaces the bundled Apple fonts; the "no album"
-placeholder takes the glass colour.
+placeholder takes the glass colour; the timer's presets are the ones a working day uses (25 min
+focus, 5 min break, ...) and a finished timer flashes for eight seconds, not forever. The glass
+shader is replaced by Summit's (`widgets/glass/`: lens rim, vibrancy, adaptive tint, Fresnel rim,
+rim light, edge light and a drop shadow), built on Jack Faith's pipeline.
 
 ## Credits and licence
 
+- Glyphs on the Projects and GitHub cards: [Octicons](https://github.com/primer/octicons) by GitHub Inc., MIT License (`widgets/parts/OCTICONS-LICENSE`).
 - **Liquid Glass** by Jack Faith ([jaxparrow07](https://github.com/jaxparrow07/liquidglass-kde-widgets)), GPL-3.0:
   the clock, calendar, weather and music widgets, and the glass effect that Vitals and Claude
   Usage are drawn with. His widgets are also on the [KDE Store](https://store.kde.org/u/jaxparrow07).

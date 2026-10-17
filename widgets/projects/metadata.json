@@ -1,0 +1,13 @@
+{
+    "KPackageStructure": "Plasma/Applet",
+    "KPlugin": {
+        "Id": "summit.projects",
+        "Name": "Projects",
+        "Description": "The git projects you worked in last: branch, uncommitted changes and commits not pushed yet. Click to open a terminal there, or open it in VS Code.",
+        "Icon": "folder-git",
+        "Category": "Utilities",
+        "License": "GPL-3.0",
+        "Version": "1.0"
+    },
+    "X-Plasma-API-Minimum-Version": "6.0"
+}

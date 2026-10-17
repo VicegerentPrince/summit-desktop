@@ -15,6 +15,8 @@ VENDOR=${SUMMIT_VENDOR:-$HOME/.local/share/summit/vendor/liquidglass-kde-widgets
 rm -rf "$OUT"; mkdir -p "$OUT"; cp -r "$SRC"/. "$OUT"/
 glass=false; photos=false
 grep -q '^import "components"' "$OUT/contents/ui/main.qml" && glass=true
+# Cards that import "parts" get Summit's shared parts: Octicon glyphs (MIT, GitHub Inc.), pills, tiles.
+grep -q '^import "parts"' "$OUT/contents/ui/main.qml" && cp -r "$HERE/parts" "$OUT/contents/ui/parts"
 [ -f "$OUT/contents/code/wall" ] && photos=true
 
 mkdir -p "$OUT/contents/ui/config"
@@ -29,6 +31,7 @@ if $glass; then
     cp "$VENDOR/LICENSE" "$OUT/contents/ui/components/LICENSE"
     cp "$HERE/glass-config.xml" "$OUT/contents/config/main.xml"
     python3 "$HERE/patch_glass.py" "$OUT/contents/ui/components/LiquidGlass.qml" >/dev/null
+    python3 "$HERE/glass/true_glass.py" "$OUT/contents/ui/components/LiquidGlass.qml" >/dev/null
     cp "$HERE/common/fonts/"* "$OUT/contents/fonts/"
 fi
 [ -d "$OUT/contents/code" ] && chmod 755 "$OUT/contents/code/"* || true
