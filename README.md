@@ -23,7 +23,8 @@ re-runnable, and measured: a new terminal shows its prompt in about 5 ms.
     cycle wallpapers, middle-click for a random one.
 - **Accent colour follows the wallpaper.** Each switch picks a colour from the photo (OKLab k-means,
   scored like Material You, checked for WCAG contrast against the interface) and applies it to
-  Plasma and to kitty.
+  Plasma, to kitty and to the zsh prompt (arrow, folder, command names). Open terminals pick it up
+  at their next prompt.
 - **Liquid Glass, Apple-style**: every card is a thick glass slab. The rim is a clear lens that bends
   the wallpaper, the middle is frosted and keeps its colour, light catches the top-left and
   bottom-right edges, and a soft shadow lifts the card. The tint deepens only over bright

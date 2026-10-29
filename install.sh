@@ -124,12 +124,13 @@ if [[ -x $ATUIN && ! -e $HOME/.local/share/atuin/history.db && -s $HOME/.zsh_his
 fi
 # the picture on the terminal's welcome card, drawn from the current wallpaper
 [[ -r $HOME/.cache/summit/welcome.png.kitty ]] || "$HOME/.local/bin/wall" card >/dev/null 2>&1
-# accent colour from the wallpaper, for Plasma and kitty (kitty.conf includes accent.conf). Switched
-# on once, on the first install; the Wallpapers widget's setting or `wall accent off` turns it off.
+# accent colour from the wallpaper, for Plasma, kitty (kitty.conf includes accent.conf) and the zsh
+# prompt (.zshrc reads accent.zsh). Switched on once, on the first install; the Wallpapers widget's
+# setting or `wall accent off` turns it off.
 if [[ ! -d $HOME/.config/summit ]]; then
   "$HOME/.local/bin/wall" accent on >/dev/null 2>&1 && note "accent colour follows the wallpaper"
 fi
-[[ -r $HOME/.config/kitty/accent.conf ]] || "$HOME/.local/bin/wall" accent now >/dev/null 2>&1
+[[ -r $HOME/.config/kitty/accent.conf && -r $HOME/.config/zsh/accent.zsh ]] || "$HOME/.local/bin/wall" accent now >/dev/null 2>&1
 TLDR=$HOME/.local/share/mise/installs/tealdeer/latest/tldr
 [[ -x $TLDR && ! -d $HOME/.cache/tealdeer/tldr-pages ]] && "$TLDR" --update 2>&1 | tail -1 | sed 's/^/  /'
 

@@ -284,5 +284,19 @@ ZSH_HIGHLIGHT_STYLES[globbing]='fg=#b9a3f5'
 ZSH_HIGHLIGHT_STYLES[redirection]='fg=#b9a3f5'
 ZSH_HIGHLIGHT_STYLES[commandseparator]='fg=#b9a3f5'
 ZSH_HIGHLIGHT_STYLES[comment]='fg=#5c6773'
+# ---- accent from the wallpaper ------------------------------------------------------------------
+# `wall` writes accent.zsh (prompt arrow, current folder, command names) at every wallpaper switch.
+# Open shells pick it up at their next prompt: one stat per prompt, a prompt reload only on change.
+_accent_file=$HOME/.config/zsh/accent.zsh _accent_mtime=0
+_accent_load() {
+  local -a st
+  zstat -A st +mtime -- $_accent_file 2>/dev/null && (( st[1] != _accent_mtime )) || return 0
+  local first=$(( !_accent_mtime ))
+  _accent_mtime=$st[1]
+  source $_accent_file
+  (( first )) || p10k reload
+}
+_accent_load
+precmd_functions=(_accent_load $precmd_functions)
 # must stay last
 [[ -r /usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ]] && source /usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
