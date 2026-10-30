@@ -116,7 +116,7 @@ Every file the installer would overwrite is first copied to `~/.local/state/summ
 | `home/` | dotfiles, installed to the same paths under `~` |
 | `look/` | colour scheme, icons, cursor, fonts |
 | `plasma-style/` | the Summit Glass panel |
-| `screens/` | the second-screen panel, full RGB range for HDMI monitors, a black-level test image |
+| `screens/` | the second-screen panel, full RGB range for HDMI monitors, the laptop taking over when the monitor loses power (needs `ddcutil`), a black-level test image |
 | `widgets/`, `widgets-panel/` | the widgets (`assemble.sh` builds them) and the patches to Liquid Glass |
 | `store/` | `build.sh` for the KDE Store files, the listings (`STORE.md`) and their images |
 | `tools/`, `syntax/` | themes for the CLI tools and editors |

@@ -1,0 +1,12 @@
+[Unit]
+Description=Move the desktop to the laptop when the external monitor loses power
+After=plasma-workspace.target
+PartOf=graphical-session.target
+
+[Service]
+ExecStart=/usr/bin/python3 -I %h/.local/share/summit/screens/monitor-power.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=graphical-session.target
