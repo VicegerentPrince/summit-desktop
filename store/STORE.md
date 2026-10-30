@@ -5,7 +5,7 @@ The six products on https://store.kde.org, with every field of the add form
 the pictures are in `store/images/`.
 
 The same for every product:
-- **Version:** `1.0.0`
+- **Version:** `1.1.0`
 - **Link to Source/Code** and **Link to your product homepage:** https://github.com/VicegerentPrince/summit-desktop
 - **Product Logo:** a picture of the product, listed for each one below. The store shows the logo as the
   first picture, and Plasma's "Get New" windows use it as the thumbnail.
@@ -25,7 +25,7 @@ stays blank.
 ## 1. Summit Desktop
 
 - **Category:** Various Plasma 6 Improvements
-- **File:** `summit-desktop-1.0.0.tar.gz`
+- **File:** `summit-desktop-1.1.0.tar.gz`
 - **Original or Modification:** Original
 - **Licence:** GPLv3
 - **Tags:** plasma6, dotfiles, kitty, zsh, glass, wallpaper, fedora
@@ -67,7 +67,7 @@ Source and issues: https://github.com/VicegerentPrince/summit-desktop
 ## 2. Summit Vitals
 
 - **Category:** Plasma 6 Monitoring
-- **File:** `summit-vitals-1.0.0.plasmoid`
+- **File:** `summit-vitals-1.1.0.plasmoid`
 - **Original or Modification:** Modification
 - **Licence:** GPLv3
 - **Tags:** plasma6, widget, plasmoid, system-monitor, cpu, temperature, glass
@@ -91,7 +91,7 @@ The glass is Liquid Glass by Jack Faith (jaxparrow07), used under GPL-3.0: https
 ## 3. Summit Claude Usage
 
 - **Category:** Plasma 6 Monitoring
-- **File:** `summit-claude-usage-1.0.0.plasmoid`
+- **File:** `summit-claude-usage-1.1.0.plasmoid`
 - **Original or Modification:** Modification
 - **Licence:** GPLv3
 - **Tags:** plasma6, widget, plasmoid, claude, claude-code, glass
@@ -115,7 +115,7 @@ Not affiliated with or endorsed by Anthropic. The glass is Liquid Glass by Jack 
 ## 4. Summit Wallpapers
 
 - **Category:** Plasma 6 Applets
-- **File:** `summit-wallpapers-1.0.0.plasmoid`
+- **File:** `summit-wallpapers-1.1.0.plasmoid`
 - **Original or Modification:** Original
 - **Licence:** GPLv3
 - **Tags:** plasma6, widget, plasmoid, wallpaper, wallhaven, panel
@@ -159,7 +159,7 @@ A cool, low-glare dark scheme: graphite surfaces (#171c23, #1d232c, #28313d), so
 ## 6. Summit Glass (Plasma style)
 
 - **Category:** Plasma Themes
-- **File:** `summit-glass-1.0.0.tar.gz`
+- **File:** `summit-glass-1.1.0.tar.gz`
 - **Original or Modification:** leave blank
 - **Licence:** LGPLv2
 - **Tags:** plasma-style, glass, translucent, blur, panel, breeze
