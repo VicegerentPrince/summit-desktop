@@ -29,7 +29,16 @@ if $glass; then
            "$VENDOR/1-common/components/shaders" "$OUT/contents/ui/components/"
     cp -L "$VENDOR/1-common/config/ConfigAppearance.qml" "$OUT/contents/ui/config/"
     cp "$VENDOR/LICENSE" "$OUT/contents/ui/components/LICENSE"
-    cp "$HERE/glass-config.xml" "$OUT/contents/config/main.xml"
+    # the glass settings, plus the card's own (entries in its contents/config/main.xml) when it has some
+    python3 - "$HERE/glass-config.xml" "$SRC/contents/config/main.xml" "$OUT/contents/config/main.xml" <<'PY'
+import os, re, sys
+glass, own, out = sys.argv[1:]
+xml = open(glass).read()
+if os.path.exists(own):
+    extra = "".join(re.findall(r"[ \t]*<entry .*?</entry>\n", open(own).read(), re.S))
+    xml = xml.replace("  </group>", extra + "  </group>", 1)
+open(out, "w").write(xml)
+PY
     python3 "$HERE/patch_glass.py" "$OUT/contents/ui/components/LiquidGlass.qml" >/dev/null
     python3 "$HERE/glass/true_glass.py" "$OUT/contents/ui/components/LiquidGlass.qml" >/dev/null
     cp "$HERE/common/fonts/"* "$OUT/contents/fonts/"

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kcfg xmlns="http://www.kde.org/standards/kcfg/1.0">
+  <group name="General">
+    <entry name="folders" type="StringList"><default>~/Documents/Projects</default></entry>
+  </group>
+</kcfg>

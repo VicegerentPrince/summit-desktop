@@ -34,7 +34,8 @@ PlasmoidItem {
     readonly property string face: "Inter Display"
     readonly property int count: 4
     readonly property string helper: decodeURIComponent(Qt.resolvedUrl("../code/projects.py").toString().replace(/^file:\/\//, ""))
-    readonly property string listCommand: "python3 -I " + quote(helper) + " " + count
+    readonly property var folders: Plasmoid.configuration.folders
+    readonly property string listCommand: "python3 -I " + quote(helper) + " " + count + " " + folders.map(quote).join(" ")
 
     property var projects: []
     property var week: ({ total: 0, projects: [], start: 0 })
