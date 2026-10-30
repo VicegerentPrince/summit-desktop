@@ -359,12 +359,13 @@ active_tab_title_template "{{fmt.bg.default}}{{fmt.fg._{tint[1:]}}}\ue0b6{{fmt.b
     subprocess.run(["pkill", "-USR1", "-x", "kitty"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
-def write_shell(acc, light):
-    """The zsh side: prompt arrow, current folder and command names. Open shells reload it at their
-    next prompt (see `.zshrc`)."""
+def write_shell(acc, tint, light):
+    """The zsh side: prompt arrow, current folder, command names and the welcome card. Open shells
+    reload it at their next prompt (see `.zshrc`)."""
     if not os.path.isdir(os.path.dirname(ZSH_ACCENT)):
         return
     zsh = f"""# Written by `wall` from the current wallpaper. Do not edit: the next wallpaper replaces it.
+typeset -g summit_accent=('{acc}' '{tint}' '{light}')     # accent, tint, text on the tint
 typeset -g POWERLEVEL9K_DIR_FOREGROUND='{acc}'
 typeset -g POWERLEVEL9K_DIR_ANCHOR_FOREGROUND='{light}'
 typeset -g POWERLEVEL9K_PROMPT_CHAR_OK_{{VIINS,VICMD,VIVIS,VIOWR}}_FOREGROUND='{acc}'
@@ -387,7 +388,7 @@ def apply_accent(path):
     fam = accent_family(path, ui_colours(scheme))
     if kitty_uses_accent():
         write_kitty(fam["accent"], fam["tint"], fam["soft"])
-    write_shell(fam["accent"], fam["soft"])
+    write_shell(fam["accent"], fam["tint"], fam["soft"])
     subprocess.run(["plasma-apply-colorscheme", scheme, "--accent-color", fam["accent"]],
                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     return fam["accent"]
@@ -399,7 +400,7 @@ def reset_accent():
     scheme = current_scheme()
     if kitty_uses_accent():
         write_kitty(DEFAULT_ACCENT, "#223f44", "#81e6d9")
-    write_shell(DEFAULT_ACCENT, "#81e6d9")
+    write_shell(DEFAULT_ACCENT, "#223f44", "#81e6d9")
     subprocess.run(["kwriteconfig6", "--file", "kdeglobals", "--group", "General", "--key", "ColorScheme", "--delete"],
                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     subprocess.run(["kwriteconfig6", "--file", "kdeglobals", "--group", "General", "--key", "ColorSchemeHash", "--delete"],

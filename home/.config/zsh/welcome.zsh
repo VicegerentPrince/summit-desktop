@@ -14,7 +14,7 @@ _welcome() {
   zmodload -F zsh/stat b:zstat 2>/dev/null
 
   local rs=$'\e[0m' hi=$'\e[1;38;2;240;244;248m' tx=$'\e[38;2;220;227;234m' mu=$'\e[38;2;134;147;161m'
-  local dim=$'\e[38;2;92;103;115m' teal=$'\e[38;2;79;209;197m' purple=$'\e[38;2;185;163;245m'
+  local dim=$'\e[38;2;92;103;115m' purple=$'\e[38;2;185;163;245m'
   local amber=$'\e[38;2;227;179;65m'
   # Nerd Font glyphs, written as escapes because private-use characters do not survive every editor
   local g_branch=$'\ue0a0' g_tip=$'\U000f0335' cap_l=$'\ue0b6' cap_r=$'\ue0b4'
@@ -110,7 +110,11 @@ _welcome() {
   done
   (( wn > 24 )) && wn=24
   (( wb > 18 )) && wb=18
-  local key_cap=$'\e[38;2;34;63;68m' key_face=$'\e[1;38;2;129;230;217;48;2;34;63;68m' name=$'\e[1;38;2;79;209;197m'
+  # the wallpaper's accent family, written by `wall` (Summit teal without it)
+  local -a acc=('#4fd1c5' '#223f44' '#81e6d9') summit_accent
+  [[ -r $HOME/.config/zsh/accent.zsh ]] && source $HOME/.config/zsh/accent.zsh && (( $#summit_accent == 3 )) && acc=($summit_accent)
+  local c; for i in 1 2 3; do c=${acc[i]}; acc[i]="$((16#${c[2,3]}));$((16#${c[4,5]}));$((16#${c[6,7]}))"; done
+  local key_cap=$'\e[38;2;'$acc[2]m key_face=$'\e[1;38;2;'$acc[3]';48;2;'$acc[2]m name=$'\e[1;38;2;'$acc[1]m
   rows+=("$hi$greet, $name${(C)USER}$rs" "$info" '')
   for i in {1..$#names}; do
     line="$key_cap$cap_l$key_face$i$rs$key_cap$cap_r$rs  $tx${(r:$wn:)${names[i][1,$wn]}}$rs"
