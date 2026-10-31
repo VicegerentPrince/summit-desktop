@@ -1,11 +1,11 @@
 # KDE Store listings
 
-The six products on https://store.kde.org, with every field of the add form
-(https://store.kde.org/product/add). Build the files with `store/build.sh` (they land in `dist/`);
-the pictures are in `store/images/`.
+The eight products for https://store.kde.org, with every field of the add form
+(https://store.kde.org/product/add). Summit Desktop and Summit Vitals are live; the other six are ready
+to add. Build the files with `store/build.sh` (they land in `dist/`); the pictures are in `store/images/`.
 
 The same for every product:
-- **Version:** `1.1.0`
+- **Version:** `1.2.0`
 - **Link to Source/Code** and **Link to your product homepage:** https://github.com/VicegerentPrince/summit-desktop
 - **Product Logo:** a picture of the product, listed for each one below. The store shows the logo as the
   first picture, and Plasma's "Get New" windows use it as the thumbnail.
@@ -16,7 +16,7 @@ The store has no summary field. Its lists show the start of the description, so 
 opens with a sentence that stands on its own.
 
 **Original or Modification** follows the store's rule. "Original" needs 60 to 70% of the work to be
-your own. Vitals and Claude Usage are modifications, because most of their code is Jack Faith's glass
+your own. Vitals, Claude Usage, Projects and GitHub are modifications, because their glass is Jack Faith's
 component. Summit Glass changes one value in Breeze, which is under the store's 5% mark, so that field
 stays blank.
 
@@ -25,13 +25,13 @@ stays blank.
 ## 1. Summit Desktop
 
 - **Category:** Various Plasma 6 Improvements
-- **File:** `summit-desktop-1.1.0.tar.gz`
+- **File:** `summit-desktop-1.2.0.tar.gz`
 - **Original or Modification:** Original
 - **Licence:** GPLv3
 - **Tags:** plasma6, dotfiles, kitty, zsh, glass, wallpaper, fedora
 - **Store page:** https://store.kde.org/p/2377643
 - **Logo:** summit-desktop.jpg
-- **Pictures:** summit-terminal.png, glass-panel-before-after.png, wallpapers-gallery.png
+- **Pictures:** summit-terminal.png, second-screen.jpg, settings.jpg, glass-panel-before-after.png, wallpapers-gallery.png
 
 **Description:**
 
@@ -41,8 +41,9 @@ A fast, glassy Plasma 6 desktop and terminal: Liquid Glass widgets, accent colou
 The complete Summit setup in one download: desktop, panel, widgets, terminal, shell, editor and tool themes. Everything installs for your user only (no root), can be re-run safely, and backs up anything it replaces.
 
 Desktop
-- Liquid Glass clock, calendar, weather and music widgets by Jack Faith (jaxparrow07), installed from his GitHub at a pinned version with fixes applied: the clock no longer redraws at 60 fps (23% of a CPU core down to under 1%), the music widget uses a quarter of the CPU and its play/pause works with phones through KDE Connect, and the glass no longer turns black after login.
-- Three more cards in the same glass: Vitals (CPU, memory, disk, network, temperature, battery), Claude Usage (Claude Code plan limits) and a Wallpapers gallery for the panel with endless Wallhaven photos at your screen's resolution.
+- Liquid Glass clock, calendar, weather, music and timer widgets by Jack Faith (jaxparrow07), installed from his GitHub at a pinned version with fixes and new features: the clock no longer redraws at 60 fps (23% of a CPU core down to under 1%), the music widget uses a quarter of the CPU and goes quiet when nothing is playing, the timer's wheels melt into a ring when you press Play, and the glass no longer turns black after login.
+- More cards in the same glass: Vitals (pick your figures: CPU, GPU, memory, swap, disk), Claude Usage (Claude Code plan limits), Projects (your latest git projects), GitHub (builds, pull requests, what needs you) and a Wallpapers gallery for the panel with endless Wallhaven photos at your screen's resolution.
+- Every card moves only when something changes, so a card at rest costs nothing. Clear Liquid or soft Frosted glass, with sliders, on each card's Appearance page.
 - The accent colour follows your wallpaper, picked in a perceptual colour space and checked for readable contrast (WCAG AA) in your colour scheme.
 - Summit colour scheme, Summit Glass panel, Papirus icons with teal folders, Bibata cursor, Inter and JetBrains Mono.
 
@@ -67,20 +68,23 @@ Source and issues: https://github.com/VicegerentPrince/summit-desktop
 ## 2. Summit Vitals
 
 - **Category:** Plasma 6 Monitoring
-- **File:** `summit-vitals-1.1.0.plasmoid`
+- **File:** `summit-vitals-1.2.0.plasmoid`
 - **Original or Modification:** Modification
 - **Licence:** GPLv3
 - **Tags:** plasma6, widget, plasmoid, system-monitor, cpu, temperature, glass
+- **Store page:** https://store.kde.org/p/2377656
 - **Logo:** vitals-card.png
-- **Pictures:** widgets-on-desktop.jpg
+- **Pictures:** vitals-settings.png, widgets-on-desktop.jpg
 
 **Description:**
 
 ```text
-A calm system card in the Liquid Glass style: CPU and memory use, free disk space, network speed, CPU temperature and battery, with thin bars that turn amber and red only when something needs attention. Reads Plasma's own system monitor service every two seconds and has no animations, so it stays light.
+A calm system card in the Liquid Glass style: pick three figures from CPU, GPU, memory, swap and free disk, with network speed, temperatures and battery below, on thin bars that turn amber and red only when something needs attention. Reads Plasma's own system monitor service every two seconds, and numbers move only when they change, so it stays light.
 
+- A Readings page chooses what the card shows, and which graphics card it reads on a laptop with two.
+- A dedicated GPU that is asleep reads Off: the card never wakes it to take a reading.
 - Resizable; the layout scales with the card.
-- Appearance settings for the glass (tint, blur, refraction, glass or solid, light or dark).
+- Appearance settings for the glass: clear Liquid or soft Frosted, tint, blur and refraction, solid, light or dark.
 - Inter Display is included, so it looks the same on any system.
 
 The glass is Liquid Glass by Jack Faith (jaxparrow07), used under GPL-3.0: https://github.com/jaxparrow07/liquidglass-kde-widgets. His clock, calendar, weather and music widgets are on this store: https://store.kde.org/u/jaxparrow07. Inter Display is by Rasmus Andersson (SIL Open Font License). Part of Summit: https://github.com/VicegerentPrince/summit-desktop
@@ -91,7 +95,7 @@ The glass is Liquid Glass by Jack Faith (jaxparrow07), used under GPL-3.0: https
 ## 3. Summit Claude Usage
 
 - **Category:** Plasma 6 Monitoring
-- **File:** `summit-claude-usage-1.1.0.plasmoid`
+- **File:** `summit-claude-usage-1.2.0.plasmoid`
 - **Original or Modification:** Modification
 - **Licence:** GPLv3
 - **Tags:** plasma6, widget, plasmoid, claude, claude-code, glass
@@ -101,7 +105,7 @@ The glass is Liquid Glass by Jack Faith (jaxparrow07), used under GPL-3.0: https
 **Description:**
 
 ```text
-Shows how much of your Claude plan's 5-hour window and weekly allowance you have used, and when each resets, with bars that turn amber at 70% and red at 90%.
+Shows how much of your Claude plan's 5-hour window and weekly allowance you have used, and when each resets, with bars that turn amber at 70% and red at 90% (both set on its Readings page).
 
 How it gets the numbers: Claude Code passes its plan limits to its status line. The widget includes a status line script that shows model, folder, git branch, context and limits in Claude Code, and saves the two figures to ~/.cache/summit/claude-usage.json for the card. Nothing is fetched from the network and no credentials are read.
 
@@ -112,10 +116,56 @@ Not affiliated with or endorsed by Anthropic. The glass is Liquid Glass by Jack 
 
 ---
 
-## 4. Summit Wallpapers
+## 4. Summit Projects
 
 - **Category:** Plasma 6 Applets
-- **File:** `summit-wallpapers-1.1.0.plasmoid`
+- **File:** `summit-projects-1.2.0.plasmoid`
+- **Original or Modification:** Modification
+- **Licence:** GPLv3
+- **Tags:** plasma6, widget, plasmoid, git, developer, projects, glass
+- **Logo:** projects-card.png
+- **Pictures:** second-screen.jpg
+
+**Description:**
+
+```text
+The git projects you worked in last, on a Liquid Glass card: branch, uncommitted changes, commits not pushed yet, and your commits per day over the last week.
+
+Click a project for a terminal there, or the editor button to open it in VS Code, Cursor, VSCodium, Zed, Kate or Sublime Text. Choose your folders, how many rows and which terminal and editor in its settings. Read-only and offline: git runs without taking locks, so a check never changes a repository.
+
+Needs git. The glass is Liquid Glass by Jack Faith (jaxparrow07), used under GPL-3.0: https://github.com/jaxparrow07/liquidglass-kde-widgets. Glyphs: Octicons by GitHub Inc., MIT License. Inter Display is by Rasmus Andersson (SIL Open Font License). Part of Summit: https://github.com/VicegerentPrince/summit-desktop
+```
+
+---
+
+## 5. Summit GitHub
+
+- **Category:** Plasma 6 Applets
+- **File:** `summit-github-1.2.0.plasmoid`
+- **Original or Modification:** Modification
+- **Licence:** GPLv3
+- **Tags:** plasma6, widget, plasmoid, github, ci, pull-requests, glass
+- **Logo:** github-card.png
+- **Pictures:** links-settings.png, second-screen.jpg
+
+**Description:**
+
+```text
+Your GitHub day on a Liquid Glass card: builds of the repositories you pushed to last, your open pull requests with their checks, and the notifications that are about you.
+
+It uses your gh login and keeps nothing else: no token to paste, and the last result stays readable offline. Choose the sections and how often it refreshes in its settings.
+
+Links open in the Google Chrome profile that matches your GitHub email, so work and personal accounts stay apart. Pick another profile or your default browser on the Links page.
+
+Needs the GitHub CLI (gh auth login). The glass is Liquid Glass by Jack Faith (jaxparrow07), used under GPL-3.0: https://github.com/jaxparrow07/liquidglass-kde-widgets. Glyphs: Octicons by GitHub Inc., MIT License. Inter Display is by Rasmus Andersson (SIL Open Font License). Part of Summit: https://github.com/VicegerentPrince/summit-desktop
+```
+
+---
+
+## 6. Summit Wallpapers
+
+- **Category:** Plasma 6 Applets
+- **File:** `summit-wallpapers-1.2.0.plasmoid`
 - **Original or Modification:** Original
 - **Licence:** GPLv3
 - **Tags:** plasma6, widget, plasmoid, wallpaper, wallhaven, panel
@@ -138,7 +188,7 @@ Needs Python 3 with Pillow (Fedora: python3-pillow, Debian/Ubuntu: python3-pil, 
 
 ---
 
-## 5. Summit (colour scheme)
+## 7. Summit (colour scheme)
 
 - **Category:** Plasma Color Schemes
 - **File:** `Summit.colors`
@@ -156,10 +206,10 @@ A cool, low-glare dark scheme: graphite surfaces (#171c23, #1d232c, #28313d), so
 
 ---
 
-## 6. Summit Glass (Plasma style)
+## 8. Summit Glass (Plasma style)
 
 - **Category:** Plasma Themes
-- **File:** `summit-glass-1.1.0.tar.gz`
+- **File:** `summit-glass-1.2.0.tar.gz`
 - **Original or Modification:** leave blank
 - **Licence:** LGPLv2
 - **Tags:** plasma-style, glass, translucent, blur, panel, breeze

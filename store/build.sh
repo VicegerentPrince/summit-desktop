@@ -2,7 +2,12 @@
 # Builds the KDE Store files into dist/:
 #   summit-vitals-<v>.plasmoid          Plasma 6 Monitoring
 #   summit-claude-usage-<v>.plasmoid    Plasma 6 Monitoring
+#   summit-projects-<v>.plasmoid        Plasma 6 Applets
+#   summit-github-<v>.plasmoid          Plasma 6 Applets
 #   summit-wallpapers-<v>.plasmoid      Plasma 6 Applets
+#   summit-{clock-square,calendar,weather,music,timer}-<v>.plasmoid
+#                                       the Liquid Glass cards with Summit's changes, for GitHub releases
+#                                       only: they keep Jack Faith's ids, so they replace his versions
 #   Summit.colors                       KDE Color Scheme
 #   summit-glass-<v>.tar.gz             Plasma Theme
 #   summit-desktop-<v>.tar.gz           the complete setup (Various Plasma 6 Improvements)
@@ -23,7 +28,16 @@ plasmoid() {   # plasmoid SRC_DIR FILE_NAME
 }
 plasmoid "$ROOT/widgets/vitals" summit-vitals
 plasmoid "$ROOT/widgets/claude" summit-claude-usage
+plasmoid "$ROOT/widgets/projects" summit-projects
+plasmoid "$ROOT/widgets/github" summit-github
 plasmoid "$ROOT/widgets-panel/wallpapers" summit-wallpapers
+
+bash "$ROOT/widgets/liquidglass.sh" "$B/liquid" >/dev/null
+for card in "$B"/liquid/plasma/plasmoids/*/; do
+    name=${card%/}; name=${name##*.}
+    (cd "$card" && zip -q -r -X "$OUT/summit-$name-$V.plasmoid" .)
+    echo "  summit-$name-$V.plasmoid"
+done
 
 cp "$ROOT/look/Summit.colors" "$OUT/Summit.colors"; echo "  Summit.colors"
 
@@ -36,7 +50,9 @@ cp "$ROOT/plasma-style/panel-background.svgz" "$S/translucent/widgets/"
 (cd "$B" && tar -czf "$OUT/summit-glass-$V.tar.gz" summit-glass)
 echo "  summit-glass-$V.tar.gz"
 
-tar -C "$ROOT" --exclude=.git --exclude=dist --exclude='__pycache__' \
+tar -C "$ROOT" --exclude=.git --exclude=dist --exclude='__pycache__' --exclude=docs/loops --exclude=store/images \
     --transform "s,^\.,summit-desktop-$V," -czf "$OUT/summit-desktop-$V.tar.gz" .
 echo "  summit-desktop-$V.tar.gz"
 rm -rf "$B"
+(cd "$OUT" && sha256sum -- * > SHA256SUMS)
+echo "  SHA256SUMS"
