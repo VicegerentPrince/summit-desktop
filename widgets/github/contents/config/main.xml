@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kcfg xmlns="http://www.kde.org/standards/kcfg/1.0">
+  <group name="General">
+    <entry name="showBuilds" type="Bool"><default>true</default></entry>
+    <entry name="showPullRequests" type="Bool"><default>true</default></entry>
+    <entry name="showForYou" type="Bool"><default>true</default></entry>
+    <entry name="refreshMinutes" type="Int"><default>5</default></entry>
+    <entry name="linkProfile" type="String"><default>auto</default></entry>
+    <entry name="linkNewWindow" type="Bool"><default>false</default></entry>
+  </group>
+</kcfg>

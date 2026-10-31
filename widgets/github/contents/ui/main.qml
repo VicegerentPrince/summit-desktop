@@ -47,6 +47,19 @@ PlasmoidItem {
     }
 
     function quote(s) { return "'" + String(s).replace(/'/g, "'\\''") + "'" }
+    // Links open in the Chrome profile chosen in Settings, by default the one with your GitHub email.
+    // Plasma starts them through github.py's own address, which is what lets Chrome come forward.
+    function openLink(url) {
+        const chosen = Plasmoid.configuration.linkProfile
+        const folder = chosen === "auto" ? (root.data.chrome_profile || "") : chosen
+        if (folder === "" || folder === "browser") {
+            Qt.openUrlExternally(url)
+            return
+        }
+        Qt.openUrlExternally("summit-github-link:?profile=" + encodeURIComponent(folder)
+                             + (Plasmoid.configuration.linkNewWindow ? "&window=new" : "")
+                             + "&url=" + encodeURIComponent(url))
+    }
 
     function take(text) {
         root.nowSec = Date.now() / 1000
@@ -54,7 +67,10 @@ PlasmoidItem {
         if (text === "") return
         try {
             const j = JSON.parse(text)
-            if (j.updated || j.error) root.data = j
+            if (!j.updated && !j.error) return
+            // the same news at a later time changes nothing, so its rows do not fade in again
+            const same = o => JSON.stringify(Object.assign({}, o, { updated: 0 }))
+            if (!root.data.updated || same(j) !== same(root.data)) root.data = j
         } catch (e) { }
     }
     P5Support.DataSource {
@@ -67,13 +83,19 @@ PlasmoidItem {
         id: live
         engine: "executable"
         connectedSources: [root.liveCommand]
-        interval: 300000
+        interval: Plasmoid.configuration.refreshMinutes * 60000
         onNewData: (source, d) => root.take(d["stdout"])
+    }
+    // A new name for every ask: the engine holds on to a source for a moment after it is dropped, so
+    // asking for the same name again would not run it.
+    P5Support.DataSource {
+        id: asked
+        engine: "executable"
+        onNewData: (source, d) => { disconnectSource(source); root.take(d["stdout"]) }
     }
     function refresh() {
         root.askedAt = Date.now() / 1000
-        live.disconnectSource(root.liveCommand)
-        live.connectSource(root.liveCommand)
+        asked.connectSource(root.liveCommand + " #" + Date.now())
     }
     Component.onCompleted: askedAt = Date.now() / 1000
 
@@ -172,6 +194,7 @@ PlasmoidItem {
 
             width: parent ? parent.width : 0
             height: full.rowHeight
+            NumberAnimation on opacity { from: 0.2; to: 1; duration: Kirigami.Units.veryLongDuration; easing.type: Easing.OutCubic }
             scale: area.pressed ? 0.975 : 1.0
             Behavior on scale { NumberAnimation { duration: area.pressed ? 90 : 280; easing.type: Easing.OutCubic } }
 
@@ -187,7 +210,7 @@ PlasmoidItem {
                 anchors.fill: parent
                 hoverEnabled: true
                 cursorShape: e.url ? Qt.PointingHandCursor : Qt.ArrowCursor
-                onClicked: if (e.url) Qt.openUrlExternally(e.url)
+                onClicked: if (e.url) root.openLink(e.url)
             }
             Item {
                 id: lead
@@ -260,7 +283,9 @@ PlasmoidItem {
 
         Column {
             anchors.fill: parent
-            visible: !!root.data.updated
+            opacity: root.data.updated ? 1 : 0
+            visible: opacity > 0
+            Behavior on opacity { NumberAnimation { duration: Kirigami.Units.veryLongDuration * 0.75 } }
             anchors.leftMargin: Math.round(10 * full.u)
             anchors.rightMargin: Math.round(10 * full.u)
             anchors.topMargin: Math.round(18 * full.u)
@@ -303,16 +328,16 @@ PlasmoidItem {
                     MouseArea {
                         anchors.fill: parent
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: Qt.openUrlExternally("https://github.com/notifications")
+                        onClicked: root.openLink("https://github.com/notifications")
                     }
                 }
             }
 
-            Item { width: 1; height: Math.round(10 * full.u) }
-            Label { x: Math.round(10 * full.u); text: "Builds"; font.pixelSize: Math.max(10, Math.round(11.5 * full.u)); font.weight: Font.DemiBold; opacity: 0.5 }
-            Item { width: 1; height: Math.round(2 * full.u) }
+            Item { width: 1; height: Math.round(10 * full.u); visible: Plasmoid.configuration.showBuilds }
+            Label { visible: Plasmoid.configuration.showBuilds; x: Math.round(10 * full.u); text: "Builds"; font.pixelSize: Math.max(10, Math.round(11.5 * full.u)); font.weight: Font.DemiBold; opacity: 0.5 }
+            Item { width: 1; height: Math.round(2 * full.u); visible: Plasmoid.configuration.showBuilds }
             Repeater {
-                model: root.data.builds || []
+                model: Plasmoid.configuration.showBuilds ? (root.data.builds || []) : []
                 delegate: Entry {
                     required property var modelData
                     tileFor: modelData.repo
@@ -326,18 +351,18 @@ PlasmoidItem {
             }
             Label {
                 x: Math.round(10 * full.u)
-                visible: !!root.data.updated && (root.data.builds || []).length === 0
+                visible: Plasmoid.configuration.showBuilds && !!root.data.updated && (root.data.builds || []).length === 0
                 height: full.rowHeight
                 verticalAlignment: Text.AlignVCenter
                 text: "No builds in your recent repositories"
                 opacity: 0.45
             }
 
-            Item { width: 1; height: Math.round(10 * full.u) }
-            Label { x: Math.round(10 * full.u); text: "Pull requests"; font.pixelSize: Math.max(10, Math.round(11.5 * full.u)); font.weight: Font.DemiBold; opacity: 0.5 }
-            Item { width: 1; height: Math.round(2 * full.u) }
+            Item { width: 1; height: Math.round(10 * full.u); visible: Plasmoid.configuration.showPullRequests }
+            Label { visible: Plasmoid.configuration.showPullRequests; x: Math.round(10 * full.u); text: "Pull requests"; font.pixelSize: Math.max(10, Math.round(11.5 * full.u)); font.weight: Font.DemiBold; opacity: 0.5 }
+            Item { width: 1; height: Math.round(2 * full.u); visible: Plasmoid.configuration.showPullRequests }
             Repeater {
-                model: (root.data.prs || []).slice(0, 3)
+                model: Plasmoid.configuration.showPullRequests ? (root.data.prs || []).slice(0, 3) : []
                 delegate: Entry {
                     required property var modelData
                     glyph: "git-pull-request"
@@ -350,18 +375,18 @@ PlasmoidItem {
             }
             Label {
                 x: Math.round(10 * full.u)
-                visible: !!root.data.updated && (root.data.prs || []).length === 0
+                visible: Plasmoid.configuration.showPullRequests && !!root.data.updated && (root.data.prs || []).length === 0
                 height: full.rowHeight
                 verticalAlignment: Text.AlignVCenter
                 text: "No open pull requests"
                 opacity: 0.45
             }
 
-            Item { width: 1; height: Math.round(10 * full.u) }
-            Label { x: Math.round(10 * full.u); text: "For you"; font.pixelSize: Math.max(10, Math.round(11.5 * full.u)); font.weight: Font.DemiBold; opacity: 0.5 }
-            Item { width: 1; height: Math.round(2 * full.u) }
+            Item { width: 1; height: Math.round(10 * full.u); visible: Plasmoid.configuration.showForYou }
+            Label { visible: Plasmoid.configuration.showForYou; x: Math.round(10 * full.u); text: "For you"; font.pixelSize: Math.max(10, Math.round(11.5 * full.u)); font.weight: Font.DemiBold; opacity: 0.5 }
+            Item { width: 1; height: Math.round(2 * full.u); visible: Plasmoid.configuration.showForYou }
             Repeater {
-                model: root.data.for_you || []
+                model: Plasmoid.configuration.showForYou ? (root.data.for_you || []) : []
                 delegate: Entry {
                     required property var modelData
                     glyph: modelData.reason.indexOf("mention") >= 0 ? "mention" : "comment"
@@ -373,7 +398,7 @@ PlasmoidItem {
             }
             Label {
                 x: Math.round(10 * full.u)
-                visible: !!root.data.updated && (root.data.for_you || []).length === 0
+                visible: Plasmoid.configuration.showForYou && !!root.data.updated && (root.data.for_you || []).length === 0
                 height: full.rowHeight
                 verticalAlignment: Text.AlignVCenter
                 text: "Nothing waiting on you"
@@ -399,7 +424,9 @@ PlasmoidItem {
         Column {
             anchors.centerIn: parent
             width: parent.width - 2 * full.pad
-            visible: !root.data.updated
+            opacity: root.data.updated ? 0 : 1
+            visible: opacity > 0
+            Behavior on opacity { NumberAnimation { duration: Kirigami.Units.veryLongDuration * 0.75 } }
             spacing: Math.round(6 * full.u)
             Text {
                 width: parent.width

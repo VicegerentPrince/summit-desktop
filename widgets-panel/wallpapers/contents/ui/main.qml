@@ -85,7 +85,11 @@ PlasmoidItem {
                 const on = out === "on"
                 if (Plasmoid.configuration.matchAccent !== on) Plasmoid.configuration.matchAccent = on
                 root.accentSynced = true
-            } else if (tag === "accent" || tag === "thumbs") {
+            } else if (tag === "froststatus") {
+                const on = out === "on"
+                if (Plasmoid.configuration.frostOtherScreens !== on) Plasmoid.configuration.frostOtherScreens = on
+                root.frostSynced = true
+            } else if (tag === "accent" || tag === "thumbs" || tag === "frost") {
                 // nothing to show
             } else if (ok && out.length > 0) {
                 root.current = out.split("\n").pop()
@@ -106,8 +110,12 @@ PlasmoidItem {
     property bool accentSynced: false
     readonly property bool matchAccent: Plasmoid.configuration.matchAccent
     onMatchAccentChanged: if (accentSynced) run(matchAccent ? "accent on" : "accent off", "accent")
+    // The frosted copy on other screens works the same way.
+    property bool frostSynced: false
+    readonly property bool frostOtherScreens: Plasmoid.configuration.frostOtherScreens
+    onFrostOtherScreensChanged: if (frostSynced) run(frostOtherScreens ? "frost on" : "frost off", "frost")
 
-    Component.onCompleted: { run("current", "current"); run("accent status", "accentstatus") }
+    Component.onCompleted: { run("current", "current"); run("accent status", "accentstatus"); run("frost status", "froststatus") }
     onExpandedChanged: if (root.expanded) { run("current", "current"); run("thumbs", "thumbs") }
 
     compactRepresentation: MouseArea {

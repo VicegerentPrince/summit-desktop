@@ -21,6 +21,7 @@ grep -q '^import "parts"' "$OUT/contents/ui/main.qml" && cp -r "$HERE/parts" "$O
 
 mkdir -p "$OUT/contents/ui/config"
 sed -e "s/@GLASS@/$glass/" -e "s/@PHOTOS@/$photos/" "$HERE/common/config/ConfigCredits.qml" > "$OUT/contents/ui/config/ConfigCredits.qml"
+cp "$HERE/common/config/"{SettingsGroup,SettingRow,Footnote}.qml "$OUT/contents/ui/config/"
 
 if $glass; then
     [ -f "$VENDOR/1-common/components/LiquidGlass.qml" ] || { echo "assemble: Liquid Glass sources missing in $VENDOR (run fetch.sh)" >&2; exit 1; }
@@ -29,6 +30,7 @@ if $glass; then
            "$VENDOR/1-common/components/shaders" "$OUT/contents/ui/components/"
     cp -L "$VENDOR/1-common/config/ConfigAppearance.qml" "$OUT/contents/ui/config/"
     cp "$VENDOR/LICENSE" "$OUT/contents/ui/components/LICENSE"
+    cp "$HERE/common/motion/SwapText.qml" "$OUT/contents/ui/components/"
     # the glass settings, plus the card's own (entries in its contents/config/main.xml) when it has some
     python3 - "$HERE/glass-config.xml" "$SRC/contents/config/main.xml" "$OUT/contents/config/main.xml" <<'PY'
 import os, re, sys

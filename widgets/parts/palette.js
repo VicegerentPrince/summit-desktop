@@ -17,7 +17,7 @@ function forName(name) {
     return tiles[hash(String(name || "").toLowerCase()) % tiles.length];
 }
 
-// "chalen" -> "C", "island-tuff-crm" -> "IT", "Bobby-Tailor-Automation-2.0" -> "BT"
+// "notes" -> "N", "web-app" -> "WA", "Field-Guide-2.0" -> "FG"
 function monogram(name) {
     var words = String(name || "?").split(/[^A-Za-z0-9]+/).filter(function (w) { return w.length > 0; });
     if (words.length === 0) return "?";

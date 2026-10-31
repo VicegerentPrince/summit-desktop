@@ -18,6 +18,13 @@
 //               rim seen from straight ahead, so this is modelled on the rim, not with Blinn-Phong).
 //               On hover the key light swings towards the pointer.
 //   depth       a crisp line of light at the lip and a faint shadow inside the bevel away from the light.
+//   magnify     the whole slab is a weak lens: what is behind it looks a little larger, as through
+//               a drop of water (Apple's clear glass does this).
+//   gloss       a hairline of light right on the silhouette, all the way round, brightest facing the
+//               light and on the far corner: the wet, glossy edge.
+//
+// The card's Glass setting picks the look: Liquid (magnify and gloss on, less frost, less sky in
+// the rim) or Frosted (both off: the first Summit glass, unchanged).
 //
 // Every addition is 0 = off, so a host that does not set the new uniforms gets the old look.
 
@@ -47,6 +54,8 @@ layout(std140, binding = 0) uniform buf {
     float fresnel;           // 0..1 rim reflection
     float legibility;        // 0..1 extra tint over bright backdrops
     float depth;             // 0..1 edge light and inner shadow
+    float magnify;           // 0..1 how much the slab enlarges the wallpaper (1 = 20 %)
+    float gloss;             // 0..1 the hairline of light on the silhouette
 };
 
 layout(binding = 1) uniform sampler2D backdrop;   // frosted
@@ -120,9 +129,10 @@ void main() {
     vec2 shiftUV = -ndir * bend * refractScale / size;
     vec2 chromaUV = -ndir * bend * refractScale * 0.07 * chromaStrength / size;
 
-    vec2 uvR = uv + shiftUV + chromaUV;
-    vec2 uvG = uv + shiftUV;
-    vec2 uvB = uv + shiftUV - chromaUV;
+    vec2 lensUV = (uv - vec2(0.5)) / (1.0 + 0.2 * clamp(magnify, 0.0, 1.0)) + vec2(0.5);
+    vec2 uvR = lensUV + shiftUV + chromaUV;
+    vec2 uvG = lensUV + shiftUV;
+    vec2 uvB = lensUV + shiftUV - chromaUV;
 
     vec3 col = vec3(texture(backdrop, toTex(uvR)).r,
                     texture(backdrop, toTex(uvG)).g,
@@ -185,6 +195,13 @@ void main() {
         float band = smoothstep(0.35, 0.7, x) * (1.0 - smoothstep(0.82, 0.97, x));
         float away = clamp(-facing, 0.0, 1.0);
         col *= 1.0 - depth * band * 0.14 * away;
+    }
+
+    // --- Gloss: about a pixel of light right on the silhouette, all the way round.
+    if (gloss > 0.0) {
+        float line = exp(-max(depthPx - 0.35, 0.0) / 0.8);
+        float k = 0.35 + 0.65 * pow(max(facing, 0.0), 4.0) + 0.5 * pow(max(-facing, 0.0), 4.0);
+        col = mix(col, vec3(1.0, 0.99, 0.975), clamp(line * k * gloss, 0.0, 1.0));
     }
 
     // Silhouette: ~1 px feather on the geometric edge; Qt Quick blends premultiplied alpha.

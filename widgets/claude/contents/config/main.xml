@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kcfg xmlns="http://www.kde.org/standards/kcfg/1.0">
+  <group name="General">
+    <entry name="warnColours" type="Bool"><default>true</default></entry>
+    <entry name="warnAt" type="Int"><default>70</default></entry>
+    <entry name="alertAt" type="Int"><default>90</default></entry>
+  </group>
+</kcfg>

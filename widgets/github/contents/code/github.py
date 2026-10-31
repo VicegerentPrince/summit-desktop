@@ -6,16 +6,34 @@ about you rather than CI noise.
 Uses the GitHub CLI's existing login (gh); stores no token. The last good answer is kept in
 ~/.cache/summit/github.json, so the card has something to show at once, and offline.
 
-    github.py            fetch (about 5 requests), update the cache, print JSON
+    github.py            fetch (about 6 requests), update the cache, print JSON
     github.py --cached   print the cache only (instant)
+    github.py --profiles print the Chrome profiles and the one matching your GitHub email
+    github.py --open L   open a summit-github-link: address in Chrome
+
+Links go through that address so that Plasma starts them. Only what Plasma starts may bring a window
+forward: a command the card ran itself would load the page in a window left hidden behind the others.
 """
 import json
 import os
+import shutil
 import subprocess
 import sys
 import time
+import urllib.parse
 
 CACHE = os.path.join(os.environ.get("XDG_CACHE_HOME") or os.path.expanduser("~/.cache"), "summit", "github.json")
+CHROME_DATA = os.path.join(os.environ.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config"), "google-chrome")
+APPLICATIONS = os.path.join(os.environ.get("XDG_DATA_HOME") or os.path.expanduser("~/.local/share"), "applications")
+SCHEME = "summit-github-link"
+HANDLER = """[Desktop Entry]
+Type=Application
+Name=GitHub card links
+Comment=Opens links from the GitHub card in the Chrome profile chosen in its settings
+NoDisplay=true
+Exec=python3 -I "{script}" --open %u
+MimeType=x-scheme-handler/{scheme};
+"""
 
 QUERY = """
 query {
@@ -78,6 +96,73 @@ def checks_for(repo):
             "time": ts(top.get("updated_at")), "url": top.get("html_url") or repo["url"]}
 
 
+def chrome_profiles():
+    """Chrome's own list of its profiles, sorted as its profile menu sorts them."""
+    if not (shutil.which("google-chrome") or shutil.which("google-chrome-stable")):
+        return []
+    try:
+        with open(os.path.join(CHROME_DATA, "Local State")) as f:
+            profiles = json.load(f)["profile"]["info_cache"]
+    except (OSError, ValueError, KeyError):
+        return []
+    found = []
+    for folder, p in profiles.items():
+        picture = os.path.join(CHROME_DATA, folder, p.get("gaia_picture_file_name") or "Google Profile Picture.png")
+        found.append({"folder": folder, "name": p.get("name") or folder, "email": p.get("user_name") or "",
+                      "picture": picture if os.path.isfile(picture) else ""})
+    return sorted(found, key=lambda p: (p["name"].lower(), p["email"].lower()))
+
+
+def account_email(cached):
+    """The email on the GitHub account, or git's when the account keeps its email private."""
+    if cached.get("email"):
+        return cached["email"]
+    r = subprocess.run(["git", "config", "--global", "user.email"], capture_output=True, text=True)
+    return r.stdout.strip()
+
+
+def matching_profile(email, profiles):
+    for p in profiles:
+        if email and p["email"].lower() == email.lower():
+            return p["folder"]
+    return ""
+
+
+def install_handler():
+    """Keeps the entry that lets Plasma start links, written only when it is missing or moved."""
+    text = HANDLER.format(script=os.path.abspath(__file__), scheme=SCHEME)
+    path = os.path.join(APPLICATIONS, SCHEME + ".desktop")
+    try:
+        with open(path) as f:
+            if f.read() == text:
+                return
+    except OSError:
+        pass
+    try:
+        os.makedirs(APPLICATIONS, exist_ok=True)
+        with open(path, "w") as f:
+            f.write(text)
+        if shutil.which("kbuildsycoca6"):
+            subprocess.run(["kbuildsycoca6"], capture_output=True, timeout=20)
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+
+
+def open_link(link):
+    q = urllib.parse.parse_qs(urllib.parse.urlsplit(link).query)
+    url = q.get("url", [""])[0]
+    if not url.startswith("https://"):
+        sys.exit(1)
+    chrome = shutil.which("google-chrome") or shutil.which("google-chrome-stable")
+    args = [chrome]
+    folder = q.get("profile", [""])[0]
+    if any(p["folder"] == folder for p in chrome_profiles()):   # Chrome would create a missing one
+        args.append("--profile-directory=" + folder)
+    if q.get("window") == ["new"]:
+        args.append("--new-window")
+    os.execv(chrome, args + [url])
+
+
 def fetch():
     data = gh("api", "graphql", "-f", f"query={QUERY}")["data"]
     viewer = data["viewer"]
@@ -117,19 +202,28 @@ def fetch():
         for_you.append({"title": subject.get("title") or "", "repo": n.get("repository", {}).get("name", ""),
                         "reason": REASONS.get(n.get("reason"), n.get("reason", "")), "url": url,
                         "time": ts(n.get("updated_at"))})
-    return {"login": viewer["login"], "builds": builds, "prs": prs[:4], "for_you": for_you,
+    return {"login": viewer["login"], "email": gh("api", "user").get("email") or "", "builds": builds, "prs": prs[:4], "for_you": for_you,
             "notifications": {"about_you": len(about), "total": len(notes)}, "updated": int(time.time())}
 
 
 def main():
+    if "--open" in sys.argv:
+        open_link(sys.argv[sys.argv.index("--open") + 1])
+        return
     cached = {}
     try:
         with open(CACHE) as f:
             cached = json.load(f)
     except (OSError, ValueError):
         pass
+    profiles = chrome_profiles()
+    email = account_email(cached)
+    if "--profiles" in sys.argv:
+        print(json.dumps({"email": email, "match": matching_profile(email, profiles), "profiles": profiles}))
+        return
     if "--cached" in sys.argv:
-        print(json.dumps(cached))
+        install_handler()
+        print(json.dumps(dict(cached, chrome_profile=matching_profile(email, profiles))))
         return
     try:
         out = fetch()
@@ -149,7 +243,7 @@ def main():
         else:
             why = "GitHub is not reachable"
         out = dict(cached, error=why)
-    print(json.dumps(out))
+    print(json.dumps(dict(out, chrome_profile=matching_profile(account_email(out), profiles))))
 
 
 if __name__ == "__main__":

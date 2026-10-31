@@ -13,6 +13,8 @@
     wall accent on | off | status    let the accent colour follow the wallpaper (Plasma, and kitty
                                      when its config includes accent.conf), or stop
     wall accent [FILE]               pick the accent from the current (or given) picture once
+    wall frost on | off | status     with two screens, the main one shows the picture and the other a
+                                     soft, frosted copy of it, so the desk reads as one scene; or stop
     wall size                        print the resolution downloads are sized for
 
 The library is ~/Pictures/Wallpapers: drop any image in there and it shows up in the gallery.
@@ -24,7 +26,7 @@ Only safe-for-work results are requested: Wallhaven's "General" category, plus "
 give search words (wall fetch gojo), with fan-service tags left out. `wall fetch` also
 skips pictures that are bright behind the desktop widgets, so the glass cards stay readable.
 """
-import json, os, random, subprocess, sys, time, urllib.parse, urllib.request
+import hashlib, json, os, random, subprocess, sys, time, urllib.parse, urllib.request
 
 HOME = os.path.expanduser("~")
 LIB = os.path.join(HOME, "Pictures", "Wallpapers")
@@ -121,6 +123,8 @@ KITTY_ACCENT = os.path.join(CONFIG, "kitty", "accent.conf")
 ACCENT_FLAG = os.path.join(CONFIG, "summit", "accent-from-wallpaper")   # present = accent follows the wallpaper
 ZSH_ACCENT = os.path.join(CONFIG, "zsh", "accent.zsh")                  # the shell prompt's accent
 WELCOME = os.path.join(CONFIG, "zsh", "welcome.zsh")                    # the Summit terminal's welcome card
+FROST_FLAG = os.path.join(CONFIG, "summit", "frost-other-screens")      # present = other screens get a frosted copy
+FROST_DIR = os.path.join(os.environ.get("XDG_DATA_HOME", os.path.join(HOME, ".local", "share")), "summit", "frosted")
 
 
 # ---- accent colour from the wallpaper ------------------------------------------------------------
@@ -380,17 +384,40 @@ ZSH_HIGHLIGHT_STYLES[precommand]='fg={acc},italic'
     os.replace(ZSH_ACCENT + ".tmp", ZSH_ACCENT)
 
 
+def folders_for(colour):
+    """Folder icons in this colour, from the optional summit-folders helper (skipped when it is not
+    installed), made before the colour scheme changes: Dolphin redraws the icons it has drawn only
+    when the palette changes."""
+    if not colour:
+        return
+    try:
+        subprocess.run(["summit-folders", "--colour", colour, "--no-refresh"],
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=60)
+    except (OSError, subprocess.SubprocessError):
+        pass
+
+
+def announce_palette():
+    """plasma-apply-colorscheme announces new colours a moment before it saves them, so an app that
+    looks quickly keeps the old ones (Dolphin did); announce them again once they are saved."""
+    subprocess.run(["dbus-send", "--session", "--type=signal", "/KGlobalSettings",
+                    "org.kde.KGlobalSettings.notifyChange", "int32:0", "int32:0"],
+                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
 def apply_accent(path):
     """Use the wallpaper's colour as the accent of the colour scheme in use (task bar, highlights,
-    buttons) and, when kitty's config includes accent.conf, of kitty (cursor, current tab, active
-    split border, scrollbar). Running kitty windows reload at once."""
+    buttons, folder icons) and, when kitty's config includes accent.conf, of kitty (cursor, current
+    tab, active split border, scrollbar). Running kitty windows reload at once."""
     scheme = current_scheme()
     fam = accent_family(path, ui_colours(scheme))
     if kitty_uses_accent():
         write_kitty(fam["accent"], fam["tint"], fam["soft"])
     write_shell(fam["accent"], fam["tint"], fam["soft"])
+    folders_for(fam["accent"])
     subprocess.run(["plasma-apply-colorscheme", scheme, "--accent-color", fam["accent"]],
                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    announce_palette()
     return fam["accent"]
 
 
@@ -398,6 +425,7 @@ def reset_accent():
     """Put the colour scheme back exactly as it ships. plasma-apply-colorscheme will not re-apply the
     scheme that is already set, so the name is cleared first; the scheme is then applied whole."""
     scheme = current_scheme()
+    folders_for(scheme_value(scheme, "Colors:View", "DecorationFocus"))
     if kitty_uses_accent():
         write_kitty(DEFAULT_ACCENT, "#223f44", "#81e6d9")
     write_shell(DEFAULT_ACCENT, "#223f44", "#81e6d9")
@@ -410,11 +438,76 @@ def reset_accent():
         other = "BreezeClassic" if scheme != "BreezeClassic" else "BreezeLight"
         subprocess.run(["plasma-apply-colorscheme", other], capture_output=True)
         subprocess.run(["plasma-apply-colorscheme", scheme], capture_output=True)
+    announce_palette()
     return scheme_value(scheme, "Colors:Selection", "BackgroundNormal") or DEFAULT_ACCENT
 
 
+# ---- a frosted copy for the other screens -------------------------------------------------------
+# With a second screen, the main screen (Plasma's screen 0) shows the picture and the others a blurred,
+# slightly darker copy of it: one scene across the desk instead of the same photograph twice, and a
+# calm backdrop for the cards there. Plasma keeps a wallpaper per screen, so the copy also waits on
+# the second screen's desktop while undocked, ready for the next time the monitor is plugged in.
+
+def plasma_script(js):
+    return subprocess.run(["qdbus-qt6", "org.kde.plasmashell", "/PlasmaShell",
+                           "org.kde.PlasmaShell.evaluateScript", js], capture_output=True, text=True, timeout=20)
+
+
+def set_wallpaper(path, main):
+    """PATH on the main screen's desktop (main=True) or on every other desktop (main=False)."""
+    skip = "d.screen !== 0" if main else "d.screen === 0"
+    js = ("var url = %s; desktops().forEach(function (d) { if (%s) { return; }"
+          " d.wallpaperPlugin = 'org.kde.image'; d.currentConfigGroup = ['Wallpaper', 'org.kde.image', 'General'];"
+          " d.writeConfig('Image', url); });") % (json.dumps("file://" + path), skip)
+    return plasma_script(js)
+
+
+def frost_path(path):
+    st = os.stat(path)
+    key = hashlib.sha1(f"{path}|{st.st_size}|{int(st.st_mtime)}".encode()).hexdigest()[:12]
+    return os.path.join(FROST_DIR, f"frost-{key}.jpg")
+
+
+def make_frost(path):
+    out = frost_path(path)
+    if not os.path.exists(out):
+        from PIL import Image, ImageChops, ImageEnhance, ImageFilter, ImageOps
+        w, h = target_size()
+        with Image.open(path) as im:
+            img = ImageOps.fit(im.convert("RGB"), (w, h), Image.LANCZOS)
+        k = 8                                     # blurring at 1/8 size looks the same and is ~60x faster
+        img = img.resize((w // k, h // k), Image.LANCZOS).filter(ImageFilter.GaussianBlur(w * 0.02 / k))
+        img = img.resize((w, h), Image.BICUBIC)
+        img = ImageEnhance.Brightness(ImageEnhance.Color(img).enhance(1.15)).enhance(0.82)
+        grain = Image.effect_noise((w, h), 24).convert("RGB")    # fine grain: smooth gradients without banding
+        img = Image.blend(img, ImageChops.add(img, grain, 1.0, -128), 0.12)
+        os.makedirs(FROST_DIR, exist_ok=True)
+        img.save(out + ".tmp", "JPEG", quality=94)
+        os.replace(out + ".tmp", out)
+    os.utime(out)                                 # the newest files are the ones in use (see apply_frost)
+    return out
+
+
+def apply_frost(path):
+    """The frosted copy of PATH on every desktop except the main screen's."""
+    out = make_frost(path)
+    set_wallpaper(out, main=False)
+    # keep the copy in use and the one before it (a screen may still be fading from it)
+    old = sorted((os.path.join(FROST_DIR, f) for f in os.listdir(FROST_DIR) if f.startswith("frost-")),
+                 key=os.path.getmtime)[:-2]
+    for f in old:
+        os.remove(f)
+    return out
+
+
 def after_switch(path):
-    """Runs in the background after a switch: the welcome card's picture and the accent."""
+    """Runs in the background after a switch: the other screens' frosted copy, the welcome card's
+    picture and the accent."""
+    if os.path.exists(FROST_FLAG):
+        try:
+            apply_frost(path)
+        except Exception:
+            pass
     if os.path.exists(WELCOME):
         try:
             make_card(path)
@@ -431,7 +524,11 @@ def apply(path):
     path = os.path.abspath(os.path.expanduser(path))
     if not os.path.isfile(path):
         sys.exit(f"wall: no such image: {path}")
-    r = subprocess.run(["plasma-apply-wallpaperimage", path], capture_output=True, text=True)
+    if os.path.exists(FROST_FLAG):
+        # the main screen now; the frosted copy for the others follows in the background (one fade each)
+        r = set_wallpaper(path, main=True)
+    else:
+        r = subprocess.run(["plasma-apply-wallpaperimage", path], capture_output=True, text=True)
     if r.returncode != 0:
         sys.exit(f"wall: could not set the wallpaper: {(r.stderr or r.stdout).strip()}")
     # the lock screen follows the desktop
@@ -443,7 +540,7 @@ def apply(path):
         f.write(path + "\n")
     os.replace(STATE + ".tmp", STATE)
     # the welcome card's picture and the accent follow (in the background: slower than the switch)
-    if os.path.exists(WELCOME) or os.path.exists(ACCENT_FLAG):
+    if os.path.exists(WELCOME) or os.path.exists(ACCENT_FLAG) or os.path.exists(FROST_FLAG):
         subprocess.Popen([sys.executable, os.path.abspath(__file__), "after-switch", path],
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
     return path
@@ -602,6 +699,26 @@ def main(argv):
             if not path or not os.path.isfile(path):
                 sys.exit("wall: no current wallpaper to take the colour from")
             needs_pillow(lambda: print(apply_accent(path)))
+    elif cmd == "frost":
+        sub = argv[1] if len(argv) > 1 else "status"
+        if sub == "status":
+            print("on" if os.path.exists(FROST_FLAG) else "off")
+        elif sub == "on":
+            os.makedirs(os.path.dirname(FROST_FLAG), exist_ok=True)
+            open(FROST_FLAG, "a").close()
+            path = current()
+            if path:
+                needs_pillow(lambda: print(apply_frost(path)))
+        elif sub == "off":
+            if os.path.exists(FROST_FLAG):
+                os.remove(FROST_FLAG)
+            path = current()
+            if path:
+                print(apply(path))                # the picture itself on every screen again
+            for f in (os.listdir(FROST_DIR) if os.path.isdir(FROST_DIR) else []):
+                os.remove(os.path.join(FROST_DIR, f))
+        else:
+            sys.exit("usage: wall frost on | off | status")
     elif cmd == "card":
         path = argv[1] if len(argv) > 1 else current()
         if not path or not os.path.isfile(path):

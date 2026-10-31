@@ -7,6 +7,8 @@ import org.kde.kcmutils as KCM
 KCM.SimpleKCM {
     property alias cfg_matchAccent: accent.checked
     property bool cfg_matchAccentDefault: false
+    property alias cfg_frostOtherScreens: frost.checked
+    property bool cfg_frostOtherScreensDefault: false
 
     Kirigami.FormLayout {
         QQC2.CheckBox {
@@ -21,6 +23,19 @@ KCM.SimpleKCM {
             text: "Picks a colour from the photo for highlights, buttons, focus rings and the task bar, "
                 + "checked for readable contrast in your colour scheme (WCAG AA). Turning it off puts "
                 + "your colour scheme's own accent back. Needs Python's Pillow library."
+        }
+        QQC2.CheckBox {
+            id: frost
+            Kirigami.FormData.label: "Other screens:"
+            text: "Show a frosted copy of the wallpaper"
+        }
+        QQC2.Label {
+            Layout.maximumWidth: Kirigami.Units.gridUnit * 24
+            wrapMode: Text.WordWrap
+            opacity: 0.75
+            text: "With a second screen, the main one shows the picture and the others a soft, blurred "
+                + "copy of it, so the desk reads as one scene and the cards there stay calm. "
+                + "Needs Python's Pillow library."
         }
         Item { Kirigami.FormData.isSection: true }
         QQC2.Label {

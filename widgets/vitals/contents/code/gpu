@@ -1,0 +1,83 @@
+#!/bin/sh
+# Graphics readings for the Vitals card. Everything here reads sysfs, which never wakes a
+# graphics card; nvidia-smi runs only for "load", and only while the card is already awake.
+#
+#   gpu list          one line per GPU: SLOT VENDOR KIND      (KIND: dedicated or built-in)
+#   gpu read [SLOT]   slot= vendor= kind= state=on|off pm=auto|on, plus idle=MS for Intel (a
+#                     counter of time spent idle) or busy=PCT temp=C for AMD. Without SLOT, or with
+#                     "auto": the dedicated GPU when there is one, else the built-in one.
+#   gpu load SLOT     "busy, temperature" of an NVIDIA card; prints nothing while the card sleeps
+#
+# SUMMIT_GPU_SYS points it at another sysfs tree (for tests).
+SYS=${SUMMIT_GPU_SYS:-/sys}
+PCI=$SYS/bus/pci/devices
+
+# describe DIR: sets slot, vendor and kind for a PCI device; fails when it is not a GPU
+describe() {
+    read -r class 2>/dev/null < "$1/class" || return 1
+    case $class in 0x03*) ;; *) return 1 ;; esac
+    slot=${1##*/}
+    v=; read -r v 2>/dev/null < "$1/vendor"
+    case $v in 0x10de) vendor=nvidia ;; 0x8086) vendor=intel ;; 0x1002) vendor=amd ;; *) vendor=other ;; esac
+    boot=0; read -r boot 2>/dev/null < "$1/boot_vga"
+    if [ "$boot" = 1 ] || [ "$vendor" = intel ]; then kind=built-in; else kind=dedicated; fi
+}
+
+# pick SLOT|auto: sets dir (and slot, vendor, kind); fails when there is no GPU
+pick() {
+    if [ -n "$1" ] && [ "$1" != auto ] && describe "$PCI/$1"; then dir=$PCI/$1; return 0; fi
+    found=
+    for d in "$PCI"/*; do
+        describe "$d" || continue
+        [ -z "$found" ] && found=$d
+        [ "$kind" = dedicated ] && { found=$d; break; }
+    done
+    [ -n "$found" ] && describe "$found" && dir=$found
+}
+
+# power: sets rs (the kernel's runtime status), state (on/off) and pm (auto when it can sleep)
+power() {
+    pm=on; read -r pm 2>/dev/null < "$dir/power/control"
+    rs=active; read -r rs 2>/dev/null < "$dir/power/runtime_status"
+    case $rs in suspended|suspending) state=off ;; *) state=on ;; esac
+}
+
+case ${1:-} in
+list)
+    for d in "$PCI"/*; do describe "$d" && echo "$slot $vendor $kind"; done
+    ;;
+read)
+    pick "${2:-auto}" || exit 0
+    power
+    extra=
+    if [ "$state" = on ]; then
+        case $vendor in
+        intel)
+            # i915, then xe
+            for f in "$dir"/drm/card*/gt/gt0/rc6_residency_ms "$dir"/tile0/gt0/gtidle/idle_residency_ms; do
+                if [ -r "$f" ] && read -r idle < "$f"; then extra=" idle=$idle"; break; fi
+            done
+            ;;
+        amd)
+            read -r busy 2>/dev/null < "$dir/gpu_busy_percent" && extra=" busy=$busy"
+            for t in "$dir"/hwmon/hwmon*/temp1_input; do
+                read -r mc 2>/dev/null < "$t" && extra="$extra temp=$((mc / 1000))"
+                break
+            done
+            ;;
+        esac
+    fi
+    echo "slot=$slot vendor=$vendor kind=$kind state=$state pm=$pm$extra"
+    ;;
+load)
+    pick "${2:-auto}" || exit 0
+    power
+    [ "$vendor" = nvidia ] && [ "$rs" = active ] || exit 0
+    command -v nvidia-smi >/dev/null 2>&1 || exit 0
+    exec nvidia-smi -i "$slot" --query-gpu=utilization.gpu,temperature.gpu --format=csv,noheader,nounits 2>/dev/null
+    ;;
+*)
+    echo "usage: gpu list | read [SLOT] | load SLOT" >&2
+    exit 2
+    ;;
+esac

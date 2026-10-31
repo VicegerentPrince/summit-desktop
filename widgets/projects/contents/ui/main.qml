@@ -4,7 +4,7 @@
     Top: how many commits you made in the last seven days, with a bar per day stacked by project.
     Below: the four projects you touched last, each on its own colour tile, with the branch and
     badges for uncommitted changes and for commits no remote has yet. Click a project for a
-    terminal there; on hover a VS Code button opens it in the editor.
+    terminal there; on hover a button opens it in the chosen editor.
 
     The data comes from contents/code/projects.py once a minute, and again when the pointer comes
     onto the card after a pause. It runs git read-only (no index rewrites) and never the network.
@@ -32,7 +32,7 @@ PlasmoidItem {
     height: 368
 
     readonly property string face: "Inter Display"
-    readonly property int count: 4
+    readonly property int count: Plasmoid.configuration.rows
     readonly property string helper: decodeURIComponent(Qt.resolvedUrl("../code/projects.py").toString().replace(/^file:\/\//, ""))
     readonly property var folders: Plasmoid.configuration.folders
     readonly property string listCommand: "python3 -I " + quote(helper) + " " + count + " " + folders.map(quote).join(" ")
@@ -60,22 +60,32 @@ PlasmoidItem {
         engine: "executable"
         connectedSources: [root.listCommand]
         interval: 60000
-        onNewData: (source, data) => {
-            root.nowSec = Date.now() / 1000
-            const text = (data["stdout"] || "").trim()
-            if (text === "") return
-            try {
-                const j = JSON.parse(text)
-                root.projects = j.projects || []
-                root.week = j.week || { total: 0, projects: [], start: 0 }
-                root.loaded = true
-                root.fetchedAt = root.nowSec
-            } catch (e) { }
-        }
+        onNewData: (source, data) => root.take(data["stdout"])
+    }
+    function take(stdout) {
+        root.nowSec = Date.now() / 1000
+        const text = (stdout || "").trim()
+        if (text === "") return
+        try {
+            const j = JSON.parse(text)
+            // the same list again changes nothing, so a refresh with no news costs no redraw
+            const list = (j.projects || []).slice(0, root.count)
+            if (JSON.stringify(list) !== JSON.stringify(root.projects)) root.projects = list
+            root.week = j.week || { total: 0, projects: [], start: 0 }
+            root.loaded = true
+            root.fetchedAt = root.nowSec
+        } catch (e) { }
+    }
+    // A new name for every ask: the engine holds on to a source for a moment after it is dropped, so
+    // asking for the same name again would not run it.
+    P5Support.DataSource {
+        id: asked
+        engine: "executable"
+        onNewData: (source, data) => { disconnectSource(source); root.take(data["stdout"]) }
     }
     function refresh() {
-        lister.disconnectSource(root.listCommand)
-        lister.connectSource(root.listCommand)
+        root.fetchedAt = Date.now() / 1000
+        asked.connectSource(root.listCommand + " #" + Date.now())
     }
 
     P5Support.DataSource {
@@ -83,8 +93,12 @@ PlasmoidItem {
         engine: "executable"
         onNewData: (source) => disconnectSource(source)
     }
-    function openTerminal(path) { launcher.connectSource("setsid -f kitty --directory " + quote(path) + " >/dev/null 2>&1 || setsid -f konsole --workdir " + quote(path) + " >/dev/null 2>&1") }
-    function openEditor(path)   { launcher.connectSource("setsid -f code " + quote(path) + " >/dev/null 2>&1") }
+    readonly property var terminals: ({ kitty: "kitty --directory", konsole: "konsole --workdir", alacritty: "alacritty --working-directory", wezterm: "wezterm start --cwd", foot: "foot --working-directory" })
+    function openTerminal(path) { launcher.connectSource("setsid -f " + (terminals[Plasmoid.configuration.terminalApp] || terminals.konsole) + " " + quote(path) + " >/dev/null 2>&1 || setsid -f konsole --workdir " + quote(path) + " >/dev/null 2>&1") }
+    // The icon each editor installs under, so the button shows the editor it opens
+    readonly property var editorIcons: ({ code: "vscode", cursor: "co.anysphere.cursor", codium: "vscodium",
+                                          zed: "zed", kate: "kate", subl: "sublime-text" })
+    function openEditor(path)   { launcher.connectSource("setsid -f " + Plasmoid.configuration.editorApp + " " + quote(path) + " >/dev/null 2>&1") }
 
     function ago(t) {
         if (!t) return ""
@@ -181,7 +195,9 @@ PlasmoidItem {
             Capsule {
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
-                visible: root.loaded && (root.pushCount > 0 || root.dirtyCount > 0)
+                opacity: root.loaded && (root.pushCount > 0 || root.dirtyCount > 0) ? 1 : 0
+                visible: opacity > 0
+                Behavior on opacity { NumberAnimation { duration: Kirigami.Units.veryLongDuration * 0.75 } }
                 size: Math.max(10, Math.round(11 * full.u))
                 face: root.face
                 glyph: root.pushCount > 0 ? "arrow-up" : "pencil"
@@ -191,7 +207,9 @@ PlasmoidItem {
             Capsule {
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
-                visible: root.loaded && root.pushCount === 0 && root.dirtyCount === 0 && root.projects.length > 0
+                opacity: root.loaded && root.pushCount === 0 && root.dirtyCount === 0 && root.projects.length > 0 ? 1 : 0
+                visible: opacity > 0
+                Behavior on opacity { NumberAnimation { duration: Kirigami.Units.veryLongDuration * 0.75 } }
                 size: Math.max(10, Math.round(11 * full.u))
                 face: root.face
                 glyph: "check-circle-fill"
@@ -431,7 +449,13 @@ PlasmoidItem {
                             anchors.right: parent.right
                             anchors.verticalCenter: parent.verticalCenter
                             spacing: Math.round(5 * full.u)
-                            visible: !row.hot
+                            opacity: row.hot ? 0 : 1
+                            visible: opacity > 0
+                            Behavior on opacity { NumberAnimation { duration: Kirigami.Units.longDuration * 0.8 } }
+                            transform: Translate {
+                                x: row.hot ? -8 * full.u : 0
+                                Behavior on x { NumberAnimation { duration: Kirigami.Units.longDuration; easing.type: Easing.OutCubic } }
+                            }
                             readonly property real s: Math.max(10, Math.round(11 * full.u))
                             Capsule {
                                 visible: !row.p.error && root.changes(row.p) > 0
@@ -464,7 +488,13 @@ PlasmoidItem {
                             anchors.right: parent.right
                             anchors.verticalCenter: parent.verticalCenter
                             spacing: Math.round(6 * full.u)
-                            visible: row.hot
+                            opacity: row.hot ? 1 : 0
+                            visible: opacity > 0
+                            Behavior on opacity { NumberAnimation { duration: Kirigami.Units.longDuration * 0.8 } }
+                            transform: Translate {
+                                x: row.hot ? 0 : 8 * full.u
+                                Behavior on x { NumberAnimation { duration: Kirigami.Units.longDuration; easing.type: Easing.OutCubic } }
+                            }
                             Kirigami.Icon {
                                 anchors.verticalCenter: parent.verticalCenter
                                 width: Math.round(16 * full.u); height: width
@@ -477,7 +507,8 @@ PlasmoidItem {
                                 Kirigami.Icon {
                                     anchors.centerIn: parent
                                     width: Math.round(16 * full.u); height: width
-                                    source: "com.microsoft.VSCode"
+                                    source: root.editorIcons[Plasmoid.configuration.editorApp] || fallback
+                                    fallback: "accessories-text-editor"
                                     scale: editorArea.pressed ? 0.88 : 1.0
                                     Behavior on scale { NumberAnimation { duration: editorArea.pressed ? 90 : 240; easing.type: Easing.OutCubic } }
                                 }

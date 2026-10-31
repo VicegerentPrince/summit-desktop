@@ -11,3 +11,6 @@ sleep 2
 W=null
 if [[ -n ${SUMMIT_WEATHER:-} ]]; then IFS=: read -r city lat lon <<<"$SUMMIT_WEATHER"; W="[\"$city\", $lat, $lon]"; fi
 ev "$SEL var MODE = \"add\"; var WEATHER = $W; $(cat "$HERE/layout.js")"
+# write the positions for every other screen size and scale too (see summit-layout.py)
+sleep 2
+python3 -I "$HERE/summit-layout.py" --once >/dev/null && echo "positions written for every screen size"

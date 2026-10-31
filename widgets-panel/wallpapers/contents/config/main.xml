@@ -8,5 +8,9 @@
     <entry name="matchAccent" type="Bool">
       <default>false</default>
     </entry>
+    <!-- mirrors `wall frost status` -->
+    <entry name="frostOtherScreens" type="Bool">
+      <default>false</default>
+    </entry>
   </group>
 </kcfg>

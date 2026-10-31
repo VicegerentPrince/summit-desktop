@@ -10,6 +10,7 @@ import QtQuick.Layouts
 import org.kde.plasma.plasmoid
 import org.kde.plasma.core as PlasmaCore
 import org.kde.plasma.plasma5support as P5Support
+import org.kde.kirigami as Kirigami
 import "components"
 
 PlasmoidItem {
@@ -75,7 +76,11 @@ PlasmoidItem {
         const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60)
         return h > 0 ? "resets in " + h + " h " + m + " min" : "resets in " + Math.max(1, m) + " min"
     }
-    function tone(pct) { return pct >= 90 ? root.bad : (pct >= 70 ? root.warn : colors.foreground) }
+    function tone(pct) {
+        const c = Plasmoid.configuration
+        if (!c.warnColours) return colors.foreground
+        return pct >= c.alertAt ? root.bad : (pct >= c.warnAt ? root.warn : colors.foreground)
+    }
 
     fullRepresentation: Item {
         id: full
@@ -129,7 +134,7 @@ PlasmoidItem {
                 }
                 Row {
                     spacing: Math.round(3 * full.u)
-                    Text {
+                    SwapText {
                         id: figure
                         text: w.pct < 0 ? "–" : w.pct.toString()
                         color: colors.foreground
@@ -161,6 +166,8 @@ PlasmoidItem {
                         height: parent.height
                         radius: height / 2
                         color: root.tone(w.pct)
+                        Behavior on width { NumberAnimation { duration: Kirigami.Units.veryLongDuration; easing.type: Easing.OutCubic } }
+                        Behavior on color { ColorAnimation { duration: Kirigami.Units.veryLongDuration } }
                     }
                 }
             }

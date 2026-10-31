@@ -1,6 +1,6 @@
 #!/bin/bash
 # Installs the Liquid Glass desktop widgets (jaxparrow07, GPL-3.0) from the pinned copy in
-# ~/.local/share/summit/vendor, with four local changes. Safe to re-run.
+# ~/.local/share/summit/vendor, with local changes. Safe to re-run.
 #
 #   liquidglass.sh [DATA_DIR]        DATA_DIR defaults to ~/.local/share
 #
@@ -20,6 +20,9 @@
 #      which is the weight that was being drawn anyway.
 #   7. Music: the scrolling-title animation could be given a negative duration for a moment,
 #      which Qt rejects with a warning each time. Clamped at zero.
+#   8. liquid/: the Timer's faces and its liquid start, the other cards' transitions, and their
+#      settings pages. Each transition runs only when something changes, so a card at rest
+#      costs nothing.
 #
 # The upstream install.sh is deliberately not used: it restarts plasmashell by process name.
 set -u
@@ -111,21 +114,6 @@ patch_file "$U" "music: play/pause works for remote (KDE Connect) players" \
 cp "$(dirname "${BASH_SOURCE[0]}")/assets/no_album.png" "$DEST/com.jaxparrow07.macoswidgets.music/contents/ui/icons/no_album.png" && ok "music: adaptive no-album placeholder"
 echo "Installed into $DEST. A running plasmashell loads changed widgets after it restarts."
 
-# Timer presets: the ones a working day uses, most used first (four fit without scrolling).
-patch_file "$DEST/com.jaxparrow07.macoswidgets.timer/contents/ui/main.qml" "timer: presets for focus and breaks" \
-'        ListElement { label: "1 min";  mins: 1;  secs: 0; pillColor: "#4ECDC4" }
-        ListElement { label: "2 min";  mins: 2;  secs: 0; pillColor: "#45B7D1" }
-        ListElement { label: "3 min";  mins: 3;  secs: 0; pillColor: "#96CEB4" }
-        ListElement { label: "5 min";  mins: 5;  secs: 0; pillColor: "#FF6B6B" }
-        ListElement { label: "10 min"; mins: 10; secs: 0; pillColor: "#DDA0DD" }
-        ListElement { label: "15 min"; mins: 15; secs: 0; pillColor: "#FFB347" }' \
-'        ListElement { label: "25 min focus"; mins: 25; secs: 0; pillColor: "#FF6B6B" }
-        ListElement { label: "5 min break";  mins: 5;  secs: 0; pillColor: "#4ECDC4" }
-        ListElement { label: "15 min";       mins: 15; secs: 0; pillColor: "#FFB347" }
-        ListElement { label: "45 min";       mins: 45; secs: 0; pillColor: "#DDA0DD" }
-        ListElement { label: "10 min";       mins: 10; secs: 0; pillColor: "#45B7D1" }
-        ListElement { label: "2 min";        mins: 2;  secs: 0; pillColor: "#96CEB4" }'
-
 # Timer: a finished countdown flashes for eight seconds instead of until someone clicks it. Every
 # animated frame redraws the desktop, so an endless 60 fps flash costs about a quarter of a core.
 T=$DEST/com.jaxparrow07.macoswidgets.timer/contents/ui
@@ -134,3 +122,5 @@ for f in "$T/main.qml" "$T/widget/CountdownDisplay.qml"; do
 done
 grep -q 'Animation.Infinite' "$T/main.qml" "$T/widget/CountdownDisplay.qml" 2>/dev/null && warn "timer flash cap" || ok "timer: finished flash stops after eight seconds"
 
+# The extra layouts, settings pages and transitions on these cards (see liquid/)
+bash "$(dirname "${BASH_SOURCE[0]}")/liquid/apply.sh" "$DEST" && ok "layouts, settings and transitions" || warn "liquid: layouts, settings and transitions"

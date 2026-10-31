@@ -2,5 +2,8 @@
 <kcfg xmlns="http://www.kde.org/standards/kcfg/1.0">
   <group name="General">
     <entry name="folders" type="StringList"><default>~/Documents/Projects</default></entry>
+    <entry name="rows" type="Int"><default>4</default></entry>
+    <entry name="terminalApp" type="String"><default>kitty</default></entry>
+    <entry name="editorApp" type="String"><default>code</default></entry>
   </group>
 </kcfg>
