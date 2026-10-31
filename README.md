@@ -13,7 +13,7 @@ re-runnable, and measured: a new terminal shows its prompt in about 5 ms.
 | **Music goes quiet when nothing plays** | **Clear Liquid or soft Frosted, your choice** |
 | ![The music card growing from quiet into the full player](docs/loops/music.webp) | ![The same cards fading between Liquid and Frosted glass](docs/loops/glass.webp) |
 
-Watch them in full: [tour](https://github.com/VicegerentPrince/summit-desktop/releases/download/v1.2.0/summit-tour.mp4), [timer](https://github.com/VicegerentPrince/summit-desktop/releases/download/v1.2.0/summit-timer.mp4), [music](https://github.com/VicegerentPrince/summit-desktop/releases/download/v1.2.0/summit-music.mp4), [cards](https://github.com/VicegerentPrince/summit-desktop/releases/download/v1.2.0/summit-cards.mp4), [settings](https://github.com/VicegerentPrince/summit-desktop/releases/download/v1.2.0/summit-settings.mp4).
+Full videos, 16 to 32 seconds at 60 fps (mp4 downloads of 2 to 6 MB, GitHub doesn't play them on the page): [tour](https://github.com/VicegerentPrince/summit-desktop/releases/download/v1.2.0/summit-tour.mp4), [timer](https://github.com/VicegerentPrince/summit-desktop/releases/download/v1.2.0/summit-timer.mp4), [music](https://github.com/VicegerentPrince/summit-desktop/releases/download/v1.2.0/summit-music.mp4), [cards](https://github.com/VicegerentPrince/summit-desktop/releases/download/v1.2.0/summit-cards.mp4), [settings](https://github.com/VicegerentPrince/summit-desktop/releases/download/v1.2.0/summit-settings.mp4).
 
 | The terminal | The second screen |
 |:--:|:--:|
@@ -28,8 +28,8 @@ Watch them in full: [tour](https://github.com/VicegerentPrince/summit-desktop/re
   - **Calendar** and **Weather**;
   - **Music**: the full player with timeline and lyrics while there is a song, and a quiet card
     when there is none (your choice in its settings);
-  - **Timer**: scroll the wheels or tap a preset, press Play and the wheels melt into a ring or a
-    bar. It runs from one number, so Cancel takes it back from wherever it is.
+  - **Timer**: scroll the wheels and press Play, or tap a preset to start at once. The wheels melt into
+    a ring or a bar. It runs from one number, so Cancel takes it back from wherever it is.
 - New cards in the same glass:
   - **Vitals**: you pick the three figures from CPU, GPU, memory, swap and free disk, with network,
     temperatures and battery below. A graphics card that is asleep reads Off: the card never wakes it;
@@ -123,6 +123,7 @@ Then log out and back in once.
 - **Claude usage widget:** add the status line to `~/.claude/settings.json`:
   `"statusLine": { "type": "command", "command": "~/.claude/statusline.sh", "padding": 0 }`
 - **GitHub card:** run `gh auth login` once.
+- **Wallpapers widget:** right-click your panel › Add Widgets › Summit Wallpapers.
 - **Projects card and welcome card** read `~/Documents/Projects`. The card's settings take other
   folders; `welcome off` hides the welcome card.
 
@@ -136,17 +137,18 @@ installed, and the cards stay where you put them.
 
 ## Undo
 
-1. Stop the two background services:
-   `systemctl --user disable --now summit-layout.service summit-monitor-power.service`
+1. Stop the background service: `systemctl --user disable --now summit-monitor-power.service`.
+   If you installed with `--layout`, stop the watcher too: `systemctl --user disable --now summit-layout.service`.
 2. Right-click each card › Remove, then delete the widgets:
-   `rm -rf ~/.local/share/plasma/plasmoids/{summit.*,com.jaxparrow07.macoswidgets.*}`
-3. In System Settings, pick your Colours, Plasma Style, Icons, Cursors and Fonts again.
+   `rm -rf ~/.local/share/plasma/plasmoids/{summit.*,com.jaxparrow07.macoswidgets.{clock-square,calendar,weather,music,timer}}`
+3. In System Settings, pick your Colours, Plasma Style, Icons, Cursors and Fonts again. The panels and the
+   wallpaper stay as they are until you change them.
 4. If the installer replaced any of your files, put them back from the oldest backup:
    `cp -r ~/.local/state/summit/backup-<time>/. ~/`. If you changed your login shell, `chsh -s /bin/bash`.
 
 ## Commands
 
-| | |
+| command | what it does |
 |---|---|
 | `wall next` / `prev` / `random` | switch wallpaper (desktop, lock screen, accent, welcome card) |
 | `wall fetch -n 8 aurora` | download more photos from Wallhaven |
