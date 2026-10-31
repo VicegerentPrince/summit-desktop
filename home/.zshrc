@@ -205,7 +205,8 @@ fi
 # ---- aliases and small functions ----------------------------------------------------------------
 # eza lists the names it reads from stdin whenever stdin is not a terminal, so a bare `ls` in a pipe or
 # in an agent's shell (stdin an open socket or /dev/null) would hang or print nothing. eza on terminals only.
-if (( $+commands[eza] )) && [[ -t 0 ]]; then
+# The instant prompt points stdin at /dev/null while this file loads, and it only ever runs on a terminal.
+if (( $+commands[eza] )) && { [[ -t 0 ]] || (( ${+__p9k_instant_prompt_active} )) }; then
   alias ls='eza --icons=auto --group-directories-first'
   alias ll='eza -l --icons=auto --group-directories-first --git --time-style=relative'
   alias la='eza -la --icons=auto --group-directories-first --git --time-style=relative'

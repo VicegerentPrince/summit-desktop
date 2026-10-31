@@ -195,7 +195,7 @@ def workbench():
     y = TB + 36
     cv.hline(AB, ex0 - 1, y, C["sideBarSectionHeader.border"])
     cv.text(AB + 8, y + 5, "v", C["icon.foreground"], F_UI_S)
-    cv.text(AB + 22, y + 4, "CHALEN", C["sideBarSectionHeader.foreground"], F_UI_SB)
+    cv.text(AB + 22, y + 4, "APP", C["sideBarSectionHeader.foreground"], F_UI_SB)
     y += 24
     rows = [
         (0, "v", "apps", None, None, None),

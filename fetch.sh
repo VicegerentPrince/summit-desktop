@@ -14,6 +14,7 @@ KV=${KITTY_VERSION:-0.49.2}
 if [ -x "$HOME/.local/kitty.app/bin/kitty" ] && "$HOME/.local/kitty.app/bin/kitty" --version 2>/dev/null | grep -q " $KV "; then
     say "kitty $KV already installed"
 else
+    say "downloading kitty $KV (about 45 MB, this can take a few minutes)"
     cd "$HOME/.cache/summit/dl" || exit 1
     F=kitty-$KV-x86_64.txz
     WANT=$(gh api "repos/kovidgoyal/kitty/releases/tags/v$KV" --jq ".assets[] | select(.name==\"$F\") | .digest" 2>/dev/null | sed 's/^sha256://')
@@ -51,6 +52,7 @@ V=$HOME/.local/share/summit/vendor/liquidglass-kde-widgets
 PIN=ff196b4a688eccc7c8c858b3d53a76d8e7055719
 if [ "$(git -C "$V" rev-parse HEAD 2>/dev/null)" = "$PIN" ]; then say "liquidglass widgets already at ${PIN:0:7}"
 else
+    say "downloading Liquid Glass (about 25 MB)"
     rm -rf "$V"; mkdir -p "$(dirname "$V")"
     if retry git clone -q https://github.com/jaxparrow07/liquidglass-kde-widgets.git "$V" >>"$LOG" 2>&1 && git -C "$V" checkout -q "$PIN" >>"$LOG" 2>&1; then
         say "liquidglass widgets ${PIN:0:7}"
@@ -66,6 +68,7 @@ fi
 TOOLS="atuin delta lazygit yazi tealdeer lazydocker dust duf glow"
 export GITHUB_TOKEN=${GITHUB_TOKEN:-$(gh auth token 2>/dev/null)}   # only for this process: avoids GitHub's anonymous rate limit
 export MISE_JOBS=2 MISE_HTTP_TIMEOUT=120
+say "installing the command-line tools through mise, one at a time"
 for t in $TOOLS; do
     if "$MISE" ls --global "$t" 2>/dev/null | grep -q "$t"; then say "tool $t already managed: $("$MISE" ls --global "$t" 2>/dev/null | awk '{print $2}' | head -1)"; continue; fi
     if retry "$MISE" use -g "$t@latest" >>"$LOG" 2>&1; then say "tool $t $("$MISE" ls --global "$t" 2>/dev/null | awk '{print $2}' | head -1)"; else say "FAILED: mise use -g $t"; fi

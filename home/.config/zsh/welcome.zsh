@@ -113,7 +113,7 @@ _welcome() {
   # the wallpaper's accent family, written by `wall` (Summit teal without it)
   local -a acc=('#4fd1c5' '#223f44' '#81e6d9') summit_accent
   [[ -r $HOME/.config/zsh/accent.zsh ]] && source $HOME/.config/zsh/accent.zsh && (( $#summit_accent == 3 )) && acc=($summit_accent)
-  local c; for i in 1 2 3; do c=${acc[i]}; acc[i]="$((16#${c[2,3]}));$((16#${c[4,5]}));$((16#${c[6,7]}))"; done
+  for i in 1 2 3; do c=${acc[i]}; acc[i]="$((16#${c[2,3]}));$((16#${c[4,5]}));$((16#${c[6,7]}))"; done
   local key_cap=$'\e[38;2;'$acc[2]m key_face=$'\e[1;38;2;'$acc[3]';48;2;'$acc[2]m name=$'\e[1;38;2;'$acc[1]m
   rows+=("$hi$greet, $name${(C)USER}$rs" "$info" '')
   for i in {1..$#names}; do

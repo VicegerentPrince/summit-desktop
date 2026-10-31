@@ -141,6 +141,10 @@ if [[ ${1:-} == --layout ]]; then
   say "10. desktop widget layout"
   bash "$HERE/widgets/apply-layout.sh" | sed 's/^/  /'
 fi
+# keeps those places on a new monitor or scale; only on a desktop that uses this layout
+if [[ ${1:-} == --layout || -e $HOME/.config/systemd/user/summit-layout.service ]]; then
+  bash "$HERE/widgets/layout-watch.sh" | sed 's/^/  /'
+fi
 
 cat <<'TXT'
 

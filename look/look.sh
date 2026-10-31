@@ -1,6 +1,6 @@
 #!/bin/bash
 # The Summit look: colour scheme, icons, cursor and fonts. No root needed; safe to re-run.
-# Packages it uses when present (Fedora names): papirus-icon-theme, bibata-cursor-theme,
+# Packages it uses when present (Fedora names): papirus-icon-theme, bibata-cursor-themes,
 # rsms-inter-fonts, jetbrains-mono-fonts.
 set -u
 HERE=$(cd "$(dirname "$0")" && pwd)
@@ -13,13 +13,22 @@ if [ "$(kreadconfig6 --file kdeglobals --group General --key ColorScheme)" != "S
     plasma-apply-colorscheme Summit >/dev/null 2>&1 && ok "Summit colour scheme"
 else ok "Summit colour scheme (already set)"; fi
 
-# icons: Papirus-Dark with teal folders, as a tiny theme that inherits Papirus-Dark
-if [ -d /usr/share/icons/Papirus-Dark ]; then
+# icons: Papirus-Dark with teal folders, as a tiny theme that inherits Papirus-Dark (or with folders
+# in the accent colour when the optional summit-folders helper is installed)
+if [ -d /usr/share/icons/Papirus-Dark ] && command -v summit-folders >/dev/null; then
+    summit-folders >/dev/null
+    if [ "$(kreadconfig6 --file kdeglobals --group Icons --key Theme)" != "Papirus-Summit" ]; then
+        /usr/libexec/plasma-changeicons Papirus-Summit >/dev/null 2>&1
+    fi
+    ok "icons: Papirus-Dark with folders in the accent colour"
+elif [ -d /usr/share/icons/Papirus-Dark ]; then
     # Built next to the live theme and swapped in only when it differs: deleting a theme that
     # Plasma is using makes the panel fall back to generic icons until plasmashell restarts.
     T=$HOME/.local/share/icons/Papirus-Summit
     N=$T.new; rm -rf "${N:?}"; mkdir -p "$N"
     dirs=""; sections=""
+    # every Papirus folder colour but teal (each has a user-<colour>-home icon)
+    colours=$(ls /usr/share/icons/Papirus/64x64/places/ | sed -n 's/^user-\(.*\)-home\.svg$/\1/p' | grep -vx teal)
     for d in /usr/share/icons/Papirus/*/places; do
         size=$(basename "$(dirname "$d")"); px=${size%%x*}
         ls "$d"/folder-teal.svg >/dev/null 2>&1 || continue
@@ -27,6 +36,15 @@ if [ -d /usr/share/icons/Papirus-Dark ]; then
         for f in "$d"/folder-teal*.svg "$d"/user-teal-*.svg; do
             [ -e "$f" ] || continue
             n=$(basename "$f"); ln -sf "$f" "$N/$size/places/${n/-teal/}"
+        done
+        # KDE shortens a missing name inside this theme before it asks Papirus-Dark
+        # ("folder-blue" -> "folder"), so the names apps use must exist here: plain folders
+        # ask for inode-directory, Dolphin's folder colour picker for folder-<colour>.
+        ln -sf "$d/folder-teal.svg" "$N/$size/places/inode-directory.svg"
+        for c in $colours; do
+            for f in "$d/folder-$c.svg" "$d/folder-$c-open.svg"; do
+                [ -e "$f" ] && ln -sf "$f" "$N/$size/places/${f##*/}"
+            done
         done
         dirs="$dirs$size/places,"
         sections="$sections
@@ -53,7 +71,7 @@ if [ -d /usr/share/icons/Bibata-Modern-Ice ]; then
     [ "$(kreadconfig6 --file kcminputrc --group Mouse --key cursorTheme)" = Bibata-Modern-Ice ] \
         || plasma-apply-cursortheme Bibata-Modern-Ice >/dev/null 2>&1
     ok "cursor: Bibata Modern Ice"
-else skip "cursor: install bibata-cursor-theme for Bibata Modern Ice"; fi
+else skip "cursor: install bibata-cursor-themes for Bibata Modern Ice"; fi
 
 # fonts: Inter for the interface, JetBrains Mono for code (written, and announced to running apps,
 # only when they differ)
