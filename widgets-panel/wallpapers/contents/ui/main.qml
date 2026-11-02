@@ -8,20 +8,21 @@
       scroll on the panel icon ... next / previous without opening anything
       middle-click the icon ...... a random one
 
+    The popup is its own frameless window (gallery/Popup.qml): that is what lets it be a shape of glass,
+    with no frost behind it, and play its way out before it closes.
+
     Files and wallpaper switching are done by `wall` (contents/code/wall, also usable from a terminal).
     Network use: only while the Discover tab is open (search results and their thumbnails),
     and when a picture is downloaded.
 */
 import QtQuick
-import QtQuick.Layouts
 import QtCore
 import Qt.labs.folderlistmodel
 import org.kde.plasma.plasmoid
 import org.kde.plasma.core as PlasmaCore
-import org.kde.plasma.components as PlasmaComponents
-import org.kde.plasma.extras as PlasmaExtras
 import org.kde.plasma.plasma5support as P5Support
 import org.kde.kirigami as Kirigami
+import "gallery"
 
 PlasmoidItem {
     id: root
@@ -34,28 +35,35 @@ PlasmoidItem {
     readonly property string thumbs: StandardPaths.writableLocation(StandardPaths.GenericCacheLocation) + "/summit/wallpapers/"
 
     property string current: ""
-    property string notice: ""
+    property string previous: ""     // what was on before the last change, for Undo
     property var busy: ({})          // Wallhaven ids being downloaded
+    property int tab: 0              // 0 library, 1 discover
+    property bool open: false
+    property string toastText: ""
+    property bool toastUndo: false
+    readonly property int galleryStyle: Plasmoid.configuration.galleryStyle
 
-    // Ask for pictures at least as large as the largest connected screen, and never below 4K.
-    readonly property size wanted: {
-        let w = 3840, h = 2160
-        const screens = Qt.application.screens
-        for (let i = 0; i < screens.length; i++) {
-            const sw = Math.round(screens[i].width * screens[i].devicePixelRatio)
-            const sh = Math.round(screens[i].height * screens[i].devicePixelRatio)
-            if (sw * sh > w * h) { w = sw; h = sh }
-        }
-        return Qt.size(w, h)
-    }
+    // The resolution pictures are asked for, from `wall size`, which reads the real screen modes. Qt
+    // cannot be asked: with a fractional scale it reports 2 for 1.9, so a 3840×2160 panel read as
+    // 4042×2274 and every true 4K picture was filtered out.
+    property size wanted: Qt.size(3840, 2160)
+
+    readonly property alias files: filesModel
+    readonly property alias results: discoverStore.results
+    readonly property alias discover: discoverStore
 
     Plasmoid.icon: "viewimage-symbolic"
+    Plasmoid.status: open ? PlasmaCore.Types.RequiresAttentionStatus : PlasmaCore.Types.ActiveStatus
     toolTipMainText: "Wallpapers"
     toolTipSubText: "Click for the gallery · scroll to cycle · middle-click for a random one"
-    activationTogglesExpanded: true
+    activationTogglesExpanded: false
+    preferredRepresentation: compactRepresentation
+    fullRepresentation: Item {}      // the gallery is gallery/Popup.qml
 
-    switchWidth: Kirigami.Units.gridUnit * 40
-    switchHeight: Kirigami.Units.gridUnit * 20
+    Connections {
+        target: Plasmoid
+        function onActivated() { root.open = !root.open }
+    }
 
     function quote(s) { return "'" + String(s).replace(/'/g, "'\\''") + "'" }
 
@@ -74,13 +82,16 @@ PlasmoidItem {
             const tag = source.replace(/^.*#([\w.-]+):\d+$/, "$1")
             const out = (data["stdout"] || "").trim()
             const ok = data["exit code"] === 0
-            if (data["exit code"] === 3) root.say("Previews and the accent need Python Pillow (python3-pillow)")
+            if (data["exit code"] === 3) root.tell("Previews and the accent need Python Pillow (python3-pillow)", false)
             if (tag.startsWith("get.")) {
                 const id = tag.slice(4)
                 const b = Object.assign({}, root.busy); delete b[id]; root.busy = b
                 const last = out.split("\n").pop()
-                if (ok && last.startsWith("/")) root.current = last
-                else root.say("Could not download that one")
+                if (ok && last.startsWith("/")) root.changed(last)
+                else root.tell("Could not download that one", false)
+            } else if (tag === "size") {
+                const m = out.match(/^(\d+)x(\d+)$/)
+                if (ok && m) root.wanted = Qt.size(Number(m[1]), Number(m[2]))
             } else if (tag === "accentstatus") {
                 const on = out === "on"
                 if (Plasmoid.configuration.matchAccent !== on) Plasmoid.configuration.matchAccent = on
@@ -92,18 +103,44 @@ PlasmoidItem {
             } else if (tag === "accent" || tag === "thumbs" || tag === "frost") {
                 // nothing to show
             } else if (ok && out.length > 0) {
-                root.current = out.split("\n").pop()
+                const path = out.split("\n").pop()
+                if (tag === "current") root.current = path
+                else root.changed(path)
             }
         }
     }
-    function say(text) { notice = text; noticeTimer.restart() }
-    Timer { id: noticeTimer; interval: 5000; onTriggered: root.notice = "" }
 
-    function use(path) { root.current = path; run("set " + quote(path), "set") }
+    function tell(text, undoable) {
+        toastText = text
+        toastUndo = undoable
+        toastTimer.restart()
+    }
+    Timer { id: toastTimer; interval: 6000; onTriggered: root.toastText = "" }
+
+    // the wallpaper really changed: remember the last one, so the change can be taken back
+    function changed(path) {
+        if (path === current) return
+        if (current !== "") previous = current
+        current = path
+        tell("Wallpaper changed", true)
+    }
+    function use(path) {
+        if (path === current) return
+        changed(path)
+        run("set " + quote(path), "set")
+    }
     function get(id) {
         if (busy[id]) return
         const b = Object.assign({}, busy); b[id] = true; busy = b
         run("add --use " + quote(id), "get." + id)
+    }
+    function undo() {
+        const back = previous
+        if (back === "") return
+        previous = ""
+        toastText = ""
+        current = back
+        run("set " + quote(back), "set")
     }
 
     // The accent setting lives in wall (it also works from a terminal); the checkbox mirrors it.
@@ -115,18 +152,53 @@ PlasmoidItem {
     readonly property bool frostOtherScreens: Plasmoid.configuration.frostOtherScreens
     onFrostOtherScreensChanged: if (frostSynced) run(frostOtherScreens ? "frost on" : "frost off", "frost")
 
-    Component.onCompleted: { run("current", "current"); run("accent status", "accentstatus"); run("frost status", "froststatus") }
-    onExpandedChanged: if (root.expanded) { run("current", "current"); run("thumbs", "thumbs") }
+    Component.onCompleted: {
+        run("current", "current"); run("size", "size")
+        run("accent status", "accentstatus"); run("frost status", "froststatus")
+    }
+    onOpenChanged: if (open) { run("current", "current"); run("thumbs", "thumbs") } else toastText = ""
+
+    FolderListModel {
+        id: filesModel
+        folder: root.library
+        nameFilters: ["*.jpg", "*.jpeg", "*.png", "*.webp", "*.avif"]
+        showDirs: false
+        sortField: FolderListModel.Time     // newest first: what you just added is at the top
+    }
+    // Thumbnails that exist so far. A card shows its thumbnail once `wall thumbs` has made it,
+    // and the picture itself (decoded at thumbnail size) until then.
+    FolderListModel {
+        id: thumbFiles
+        folder: root.thumbs
+        nameFilters: ["*.jpg"]
+        showDirs: false
+        onCountChanged: root.thumbSetRevision++
+    }
+    property int thumbSetRevision: 0
+    readonly property var thumbSet: {
+        thumbSetRevision
+        const set = {}
+        for (let i = 0; i < thumbFiles.count; i++) set[thumbFiles.get(i, "fileBaseName")] = true
+        return set
+    }
+    function has(id) {   // is this Wallhaven picture already in the library?
+        filesModel.count      // re-evaluate when the folder changes
+        return filesModel.indexOf(root.library + "/wallhaven-" + id + ".jpg") >= 0
+    }
+
+    Discover { id: discoverStore; app: root }
 
     compactRepresentation: MouseArea {
         id: compact
         acceptedButtons: Qt.LeftButton | Qt.MiddleButton
         hoverEnabled: true
         property real wheelAcc: 0
+        property bool wasOpen: false
 
+        onPressed: wasOpen = root.open     // a click outside closes it first: this click must not reopen it
         onClicked: mouse => {
             if (mouse.button === Qt.MiddleButton) root.run("random", "random")
-            else root.expanded = !root.expanded
+            else root.open = !wasOpen
         }
         onWheel: wheel => {
             wheelAcc += wheel.angleDelta.y
@@ -137,429 +209,20 @@ PlasmoidItem {
         }
         Timer { id: throttle; interval: 250 }
 
+        Rectangle {   // the icon sits in a drop of light while its popup is open
+            anchors.centerIn: parent
+            width: Math.min(parent.width, parent.height) + 8
+            height: width
+            radius: width / 2
+            color: Qt.rgba(1, 1, 1, 0.14)
+            opacity: root.open ? 1 : 0
+            Behavior on opacity { NumberAnimation { duration: Kirigami.Units.shortDuration } }
+        }
         Kirigami.Icon {
             anchors.fill: parent
             source: Plasmoid.icon
             active: compact.containsMouse
         }
-    }
-
-    fullRepresentation: Item {
-        id: full
-
-        readonly property int columns: 4
-        readonly property int cardW: 216
-        readonly property int cardH: 122
-        readonly property int gap: 12
-        readonly property int pad: Kirigami.Units.largeSpacing
-
-        // four cards per row, three and a half rows visible so it is obvious there is more below
-        Layout.minimumWidth: columns * (cardW + gap) + 2 * pad + Kirigami.Units.gridUnit
-        Layout.preferredWidth: Layout.minimumWidth
-        Layout.minimumHeight: Math.round(3.45 * (cardH + gap)) + Kirigami.Units.gridUnit * 5 + 3 * pad
-        Layout.preferredHeight: Layout.minimumHeight
-        Layout.maximumWidth: Layout.minimumWidth
-        Layout.maximumHeight: Layout.minimumHeight
-
-        // ---- one picture ---------------------------------------------------------------------
-        component Card: Item {
-            id: card
-            property url picture
-            property url fallback
-            property bool isCurrent: false
-            property bool inLibrary: false
-            property bool isBusy: false
-            property bool isFocus: false
-            property string badge: ""
-            signal chosen()
-
-            z: hit.containsMouse ? 2 : 1
-
-            Kirigami.ShadowedImage {
-                id: face
-                anchors.centerIn: parent
-                width: parent.width - full.gap
-                height: parent.height - full.gap
-                radius: 10
-                fillMode: Image.PreserveAspectCrop
-                asynchronous: true
-                sourceSize.width: 512
-                sourceSize.height: 288
-                source: card.picture
-                onStatusChanged: if (status === Image.Error && card.fallback != "" && source != card.fallback) source = card.fallback
-                color: Qt.rgba(1, 1, 1, 0.06)
-                opacity: card.isBusy ? 0.45 : 1
-
-                border.width: card.isCurrent ? 2 : (card.isFocus ? 1 : 0)
-                border.color: card.isCurrent ? Kirigami.Theme.highlightColor : Kirigami.Theme.textColor
-                shadow.size: hit.containsMouse ? 18 : 8
-                shadow.yOffset: hit.containsMouse ? 6 : 2
-                shadow.color: Qt.rgba(0, 0, 0, hit.containsMouse ? 0.45 : 0.25)
-
-                scale: hit.pressed ? 0.975 : (hit.containsMouse ? 1.035 : 1)
-                Behavior on scale { NumberAnimation { duration: 110; easing.type: Easing.OutCubic } }
-
-                Rectangle {   // in use / already in the library
-                    visible: card.isCurrent || card.inLibrary
-                    anchors.top: parent.top
-                    anchors.right: parent.right
-                    anchors.margins: 8
-                    width: 20; height: 20; radius: 10
-                    color: card.isCurrent ? Kirigami.Theme.highlightColor : Qt.rgba(0, 0, 0, 0.55)
-                    Kirigami.Icon {
-                        anchors.centerIn: parent
-                        width: 14; height: 14
-                        source: "checkmark"
-                        color: card.isCurrent ? Kirigami.Theme.highlightedTextColor : "white"
-                    }
-                }
-                Rectangle {   // resolution, on pictures that are not downloaded yet
-                    visible: card.badge !== "" && !card.inLibrary
-                    anchors.left: parent.left
-                    anchors.bottom: parent.bottom
-                    anchors.margins: 8
-                    width: badgeText.implicitWidth + 12
-                    height: 18
-                    radius: 9
-                    color: Qt.rgba(0, 0, 0, 0.55)
-                    Text {
-                        id: badgeText
-                        anchors.centerIn: parent
-                        text: card.badge
-                        color: "white"
-                        font.pixelSize: 10
-                        font.weight: Font.DemiBold
-                    }
-                }
-            }
-            PlasmaComponents.BusyIndicator {
-                anchors.centerIn: parent
-                visible: card.isBusy
-                running: visible
-            }
-            MouseArea {
-                id: hit
-                anchors.fill: face
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onClicked: card.chosen()
-            }
-        }
-
-        FolderListModel {
-            id: files
-            folder: root.library
-            nameFilters: ["*.jpg", "*.jpeg", "*.png", "*.webp", "*.avif"]
-            showDirs: false
-            sortField: FolderListModel.Name
-        }
-        // Thumbnails that exist so far. A card shows its thumbnail once `wall thumbs` has made it,
-        // and the picture itself (decoded at thumbnail size) until then.
-        FolderListModel {
-            id: thumbFiles
-            folder: root.thumbs
-            nameFilters: ["*.jpg"]
-            showDirs: false
-            onCountChanged: full.thumbSetRevision++
-        }
-        property int thumbSetRevision: 0
-        readonly property var thumbSet: {
-            thumbSetRevision
-            const set = {}
-            for (let i = 0; i < thumbFiles.count; i++) set[thumbFiles.get(i, "fileBaseName")] = true
-            return set
-        }
-        function has(id) {   // is this Wallhaven picture already in the library?
-            files.count      // re-evaluate when the folder changes
-            return files.indexOf(root.library + "/wallhaven-" + id + ".jpg") >= 0
-        }
-
-        // ---- Discover: state and loading (kept out of the ScrollView, which must contain only
-        // its GridView or it will not size it) ------------------------------------------------
-        Item {
-            id: discover
-            visible: false
-
-            property string query: ""
-            property bool custom: false
-            property int page: 0
-            property int lastPage: 1
-            property bool loading: false
-            property bool failed: false
-            // When a search runs out, "Load more" widens it: all-time favourites first, then the
-            // most viewed, then random picks (endless). Ids already shown are skipped.
-            property int stage: 0
-            readonly property var stages: ["favorites", "views", "random"]
-            readonly property bool exhausted: !loading && !failed && page >= lastPage && results.count > 0
-            property var seen: ({})
-            property string seed: ""
-            readonly property string status: failed ? "No connection"
-                : loading && results.count === 0 ? "Loading…"
-                : results.count + " shown · " + root.wanted.width + "×" + root.wanted.height + " or larger"
-
-            ListModel { id: results }
-
-            // Anime is only searched together with these left out: "safe for work" is set by hand on
-            // Wallhaven, and fan service sometimes slips through it
-            readonly property string clean: '-ecchi -nude -lingerie -underwear -panties -bikini -swimwear -cleavage -"big boobs" -thighs -"thigh-highs" -stockings -pantyhose -"bare shoulders"'
-
-            function load(q, isCustom) {
-                query = q; custom = isCustom; page = 0; lastPage = 1; failed = false
-                stage = 0; seen = ({})
-                results.clear()
-                more()
-            }
-            function widen() {
-                if (loading) return
-                stage = Math.min(stage + 1, stages.length - 1)
-                seed = Math.random().toString(36).slice(2, 8)
-                page = 0; lastPage = 1
-                more()
-            }
-            function more() {
-                if (query === "" || loading || page >= lastPage) return
-                loading = true
-                const asked = query, wasCustom = custom, next = page + 1, sort = stages[stage]
-                const url = "https://wallhaven.cc/api/v1/search?q="
-                    + encodeURIComponent(wasCustom ? asked + " " + clean : asked)
-                    // a typed search also covers Anime (a search for Gojo found 2 in General alone);
-                    // the topics stay with General photographs. Safe for work either way.
-                    + "&categories=" + (wasCustom ? "110" : "100") + "&purity=100&ratios=16x9,16x10"
-                    + "&atleast=" + root.wanted.width + "x" + root.wanted.height
-                    // all-time favourites: a year's toplist ran out after a few pages (Aurora had 13)
-                    + (sort === "random" ? "&sorting=random&seed=" + discover.seed : "&sorting=" + sort + "&order=desc")
-                    + "&page=" + next
-                const xhr = new XMLHttpRequest()
-                xhr.onreadystatechange = function () {
-                    if (xhr.readyState !== XMLHttpRequest.DONE) return
-                    discover.loading = false
-                    // the topic changed while this was in flight: drop it and load the new one
-                    if (asked !== discover.query || wasCustom !== discover.custom || sort !== discover.stages[discover.stage]) { discover.more(); return }
-                    if (xhr.status !== 200) { discover.failed = true; return }
-                    let d
-                    try { d = JSON.parse(xhr.responseText) } catch (e) { discover.failed = true; return }
-                    discover.failed = false
-                    discover.page = next
-                    discover.lastPage = (d.meta && d.meta.last_page) || next
-                    const seen = Object.assign({}, discover.seen)
-                    let added = 0
-                    for (const w of d.data) {
-                        if (seen[w.id]) continue
-                        seen[w.id] = true; added++
-                        const px = w.dimension_x || 0
-                        results.append({ wid: w.id, thumb: w.thumbs.small,
-                                         label: px >= 7680 ? "8K" : px >= 5120 ? "5K" : px >= 3840 ? "4K" : px >= 2560 ? "QHD" : "" })
-                    }
-                    discover.seen = seen
-                    // a page of nothing but repeats: keep going so the grid actually grows
-                    if (added === 0 && discover.page < discover.lastPage) discover.more()
-                }
-                xhr.open("GET", url)
-                xhr.timeout = 20000      // must be set after open()
-                xhr.send()
-            }
-
-            // start with a topic the first time the tab is shown
-            readonly property bool shown: tabs.currentIndex === 1 && root.expanded
-            onShownChanged: if (shown && query === "") load("mountains", false)
-        }
-
-        // ---- header --------------------------------------------------------------------------
-        RowLayout {
-            id: header
-            anchors.top: parent.top
-            anchors.left: parent.left
-            anchors.right: parent.right
-            anchors.margins: full.pad
-            spacing: Kirigami.Units.smallSpacing
-
-            PlasmaComponents.TabBar {
-                id: tabs
-                Layout.preferredWidth: Kirigami.Units.gridUnit * 15
-                PlasmaComponents.TabButton { text: "Library"; icon.name: "folder-pictures-symbolic" }
-                PlasmaComponents.TabButton { text: "Discover"; icon.name: "globe-symbolic" }
-            }
-            PlasmaComponents.Label {
-                Layout.leftMargin: Kirigami.Units.largeSpacing
-                Layout.fillWidth: true
-                opacity: 0.6
-                elide: Text.ElideRight
-                text: root.notice !== "" ? root.notice
-                    : tabs.currentIndex === 0 ? files.count + (files.count === 1 ? " picture" : " pictures")
-                    : discover.status
-            }
-            PlasmaExtras.SearchField {
-                id: search
-                visible: tabs.currentIndex === 1
-                Layout.preferredWidth: Kirigami.Units.gridUnit * 13
-                placeholderText: "Search Wallhaven…"
-                onAccepted: if (text.trim() !== "") discover.load(text.trim(), true)
-            }
-            PlasmaComponents.ToolButton {
-                visible: tabs.currentIndex === 0
-                icon.name: "media-playlist-shuffle"
-                text: "Shuffle"
-                enabled: files.count > 1
-                onClicked: root.run("random", "random")
-            }
-            PlasmaComponents.ToolButton {
-                visible: tabs.currentIndex === 0
-                icon.name: "folder-open"
-                display: PlasmaComponents.ToolButton.IconOnly
-                text: "Open folder"
-                onClicked: Qt.openUrlExternally(root.library)
-                PlasmaComponents.ToolTip.text: "Open ~/Pictures/Wallpapers (drop your own pictures in)"
-                PlasmaComponents.ToolTip.visible: hovered
-                PlasmaComponents.ToolTip.delay: Kirigami.Units.toolTipDelay
-            }
-        }
-
-        // ---- topics (Discover only) ------------------------------------------------------------
-        Flow {
-            id: topics
-            anchors.top: header.bottom
-            anchors.left: parent.left
-            anchors.right: parent.right
-            anchors.leftMargin: full.pad
-            anchors.rightMargin: full.pad
-            anchors.topMargin: visible ? Kirigami.Units.smallSpacing * 2 : 0
-            height: visible ? implicitHeight : 0
-            visible: tabs.currentIndex === 1
-            spacing: Kirigami.Units.smallSpacing
-
-            Repeater {
-                // label, then the Wallhaven search behind it (the singular finds more)
-                model: [["Mountains", "mountains"], ["Night sky", "night sky"], ["Forest", "forest"],
-                        ["Lakes", "lake"], ["Aurora", "aurora"], ["Ocean", "ocean"], ["Desert", "desert"],
-                        ["Snow", "snow"], ["Waterfalls", "waterfall"], ["Sunset", "sunset"],
-                        ["Clouds", "clouds"], ["Landscape", "landscape"], ["City lights", "city lights"],
-                        ["Minimal", "minimal"], ["Space", "space"]]
-                PlasmaComponents.ToolButton {
-                    required property var modelData
-                    text: modelData[0]
-                    checkable: true
-                    checked: discover.query === modelData[1] && !discover.custom
-                    onClicked: { search.text = ""; discover.load(modelData[1], false) }
-                }
-            }
-        }
-
-        StackLayout {
-            anchors.top: topics.bottom
-            anchors.left: parent.left
-            anchors.right: parent.right
-            anchors.bottom: parent.bottom
-            anchors.margins: full.pad
-            currentIndex: tabs.currentIndex
-
-            // ---- Library ---------------------------------------------------------------------
-            PlasmaComponents.ScrollView {
-                GridView {
-                    id: grid
-                    clip: true
-                    focus: true
-                    model: files
-                    // always exactly `columns` per row, whatever the scroll bar takes
-                    cellWidth: Math.floor(width / full.columns)
-                    cellHeight: Math.round((cellWidth - full.gap) * 9 / 16) + full.gap
-                    boundsBehavior: Flickable.StopAtBounds
-                    keyNavigationEnabled: true
-                    highlightFollowsCurrentItem: false
-                    currentIndex: -1
-                    cacheBuffer: cellHeight * 2
-
-                    Keys.onReturnPressed: if (currentItem) root.use(currentItem.path)
-                    Keys.onEnterPressed: if (currentItem) root.use(currentItem.path)
-
-                    delegate: Card {
-                        required property int index
-                        required property string filePath
-                        required property string fileBaseName
-                        required property url fileUrl
-                        readonly property string path: filePath
-
-                        width: grid.cellWidth
-                        height: grid.cellHeight
-                        picture: full.thumbSet[fileBaseName] ? root.thumbs + fileBaseName + ".jpg" : fileUrl
-                        fallback: fileUrl   // a picture dropped in by hand has no thumbnail yet
-                        isCurrent: root.current === filePath
-                        isFocus: grid.activeFocus && grid.currentIndex === index
-                        onChosen: { grid.currentIndex = index; root.use(filePath) }
-                    }
-
-                    PlasmaExtras.PlaceholderMessage {
-                        anchors.centerIn: parent
-                        width: parent.width - Kirigami.Units.gridUnit * 4
-                        visible: files.count === 0 && files.status === FolderListModel.Ready
-                        iconName: "viewimage-symbolic"
-                        text: "No wallpapers yet"
-                        explanation: "Pick some in Discover, or drop pictures into ~/Pictures/Wallpapers."
-                    }
-                }
-            }
-
-            // ---- Discover --------------------------------------------------------------------
-            PlasmaComponents.ScrollView {
-                GridView {
-                    id: remote
-                    clip: true
-                    model: results
-                    cellWidth: Math.floor(width / full.columns)
-                    cellHeight: Math.round((cellWidth - full.gap) * 9 / 16) + full.gap
-                    boundsBehavior: Flickable.StopAtBounds
-                    cacheBuffer: cellHeight * 2
-                    // load the next page a little before the end is reached
-                    onContentYChanged: if (contentY + height > contentHeight - 2 * cellHeight) discover.more()
-                    onCountChanged: if (contentHeight <= height) discover.more()
-
-                    footer: Item {
-                        width: remote.width
-                        height: results.count > 0 ? Kirigami.Units.gridUnit * 3 : 0   // fixed: a changing footer would move the scroll position
-                        PlasmaComponents.Button {
-                            anchors.centerIn: parent
-                            visible: discover.exhausted
-                            icon.name: "view-more-symbolic"
-                            text: discover.stage < discover.stages.length - 1 ? "Load more" : "Load more random picks"
-                            onClicked: discover.widen()
-                        }
-                        PlasmaComponents.BusyIndicator {
-                            anchors.centerIn: parent
-                            visible: discover.loading && results.count > 0
-                            running: visible
-                        }
-                    }
-
-                    delegate: Card {
-                        required property string wid
-                        required property string thumb
-                        required property string label
-
-                        width: remote.cellWidth
-                        height: remote.cellHeight
-                        picture: thumb
-                        badge: label
-                        inLibrary: full.has(wid)
-                        isCurrent: root.current === root.libraryPath + "/wallhaven-" + wid + ".jpg"
-                        isBusy: root.busy[wid] === true
-                        onChosen: inLibrary ? root.use(root.libraryPath + "/wallhaven-" + wid + ".jpg") : root.get(wid)
-                    }
-
-                    PlasmaExtras.PlaceholderMessage {
-                        anchors.centerIn: parent
-                        width: parent.width - Kirigami.Units.gridUnit * 4
-                        visible: results.count === 0 && !discover.loading
-                        iconName: discover.failed ? "network-disconnect-symbolic" : "viewimage-symbolic"
-                        text: discover.failed ? "Could not reach Wallhaven" : "Nothing found"
-                        explanation: discover.failed ? "The library still works offline." : "Try another topic or search."
-                        helpfulAction: Kirigami.Action {
-                            enabled: discover.failed
-                            icon.name: "view-refresh"
-                            text: "Try again"
-                            onTriggered: discover.load(discover.query === "" ? "mountains" : discover.query, discover.custom)
-                        }
-                    }
-                }
-            }
-        }
+        Popup { app: root; anchorItem: compact }
     }
 }

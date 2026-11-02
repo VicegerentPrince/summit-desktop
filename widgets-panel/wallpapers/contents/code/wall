@@ -71,19 +71,30 @@ def current():
         return ""
 
 
+THUMB = (640, 360)      # sharp in the widest gallery on a 4K screen
+
+
 def thumb_path(path):
     return os.path.join(THUMBS, os.path.splitext(os.path.basename(path))[0] + ".jpg")
 
 
 def make_thumb(path, force=False):
+    from PIL import Image, ImageOps
     out = thumb_path(path)
     if not force and os.path.exists(out) and os.path.getmtime(out) >= os.path.getmtime(path):
-        return out
-    from PIL import Image, ImageOps
+        try:
+            with Image.open(out) as have:
+                if have.size == THUMB:            # one from an older version stays until it is replaced
+                    return out
+        except OSError:
+            pass
     os.makedirs(THUMBS, exist_ok=True)
     with Image.open(path) as im:
-        im.draft("RGB", (1024, 576))          # JPEGs decode straight to a small size: much faster
-        ImageOps.fit(im.convert("RGB"), (512, 288), Image.LANCZOS).save(out, "JPEG", quality=88)
+        im.draft("RGB", (THUMB[0] * 2, THUMB[1] * 2))          # JPEGs decode straight to a small size: much faster
+        small = ImageOps.fit(im.convert("RGB"), THUMB, Image.LANCZOS)
+    part = f"{out}.{os.getpid()}.part"        # the gallery may be reading: it must never see half a file
+    small.save(part, "JPEG", quality=88)
+    os.replace(part, out)
     return out
 
 
@@ -727,7 +738,10 @@ def main(argv):
     elif cmd == "thumbs":
         def thumbs():
             for p in library():
-                make_thumb(p, force="--force" in argv)
+                try:
+                    make_thumb(p, force="--force" in argv)
+                except OSError as e:                  # one bad picture must not stop the rest
+                    print(f"  {os.path.basename(p)}: {e}", file=sys.stderr)
             print(f"{len(library())} thumbnails in {THUMBS}")
         needs_pillow(thumbs)
     elif cmd == "add" and len(argv) > 1:

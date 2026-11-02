@@ -41,8 +41,9 @@ Full videos, 16 to 32 seconds at 60 fps (mp4 downloads of 2 to 6 MB, GitHub does
     checks, and the notifications that are about you (uses your `gh` login; works offline from
     cache). Links open in the Google Chrome profile that matches your GitHub email, or the one you pick;
   - **Wallpapers** (panel): a gallery of your library plus a *Discover* tab that keeps loading
-    top-rated photos from Wallhaven at your screen's resolution (4K minimum). Scroll on the icon to
-    cycle wallpapers, middle-click for a random one.
+    top-rated photos from Wallhaven at your screen's resolution (4K minimum). Its Settings offer
+    three looks: Float (the default), Clear and Stage. Scroll on the icon to cycle wallpapers,
+    middle-click for a random one.
 - **Motion only when something changes.** Numbers, titles and icons have small transitions, and a
   card at rest costs nothing. They follow Plasma's animation speed, so turning animations off in
   System Settings turns them off here.

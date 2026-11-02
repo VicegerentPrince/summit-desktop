@@ -9,6 +9,9 @@ KCM.SimpleKCM {
     property bool cfg_matchAccentDefault: false
     property alias cfg_frostOtherScreens: frost.checked
     property bool cfg_frostOtherScreensDefault: false
+    // on the Gallery page; Plasma hands every page every setting
+    property int cfg_galleryStyle
+    property int cfg_galleryStyleDefault: 1
 
     Kirigami.FormLayout {
         QQC2.CheckBox {
