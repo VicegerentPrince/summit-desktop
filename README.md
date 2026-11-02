@@ -33,8 +33,8 @@ Full videos, 16 to 32 seconds at 60 fps (mp4 downloads of 2 to 6 MB, GitHub does
 - New cards in the same glass:
   - **Vitals**: you pick the three figures from CPU, GPU, memory, swap and free disk, with network,
     temperatures and battery below. A graphics card that is asleep reads Off: the card never wakes it;
-  - **Claude Usage**: your Claude Code 5-hour and weekly limits, with warnings at the levels you
-    choose (needs the status line below);
+  - **Claude Usage**: your Claude Code weekly limit, and the 5-hour limit if your plan has one, with
+    warnings at the levels you choose (needs the status line below);
   - **Projects**: the git projects you worked in last, with uncommitted changes and commits not
     pushed yet; click for a terminal there, or open it in your editor;
   - **GitHub**: builds of the repositories you pushed to last, your open pull requests with their

@@ -14,8 +14,9 @@ KCM.SimpleKCM {
         QQC2.Label {
             Layout.fillWidth: true
             wrapMode: Text.WordWrap
-            text: "This card shows the 5-hour and weekly limits of your Claude plan, as Claude Code "
-                + "reports them to its status line. To connect it, add the lines below to "
+            text: "This card shows the limits of your Claude plan, weekly and 5-hour (a plan without "
+                + "a 5-hour limit gets the week alone), as Claude Code reports them to its status "
+                + "line. To connect it, add the lines below to "
                 + "~/.claude/settings.json (inside the outer { }, separated from the entry before "
                 + "it by a comma). The card fills in the next time Claude Code shows its status line."
         }
@@ -38,7 +39,7 @@ KCM.SimpleKCM {
             opacity: 0.75
             text: "The script also becomes Claude Code's status line: model, folder, git branch, "
                 + "context use and plan limits. It needs jq. It reads only what Claude Code passes to "
-                + "it, sends nothing anywhere, and saves the two figures to "
+                + "it, sends nothing anywhere, and saves the figures to "
                 + "~/.cache/summit/claude-usage.json for this card. Not affiliated with Anthropic."
         }
     }

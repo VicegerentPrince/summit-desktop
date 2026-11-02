@@ -105,9 +105,9 @@ The glass is Liquid Glass by Jack Faith (jaxparrow07), used under GPL-3.0: https
 **Description:**
 
 ```text
-Shows how much of your Claude plan's 5-hour window and weekly allowance you have used, and when each resets, with bars that turn amber at 70% and red at 90% (both set on its Readings page).
+Shows how much of your Claude plan's weekly allowance and 5-hour window you have used, and when each resets, with bars that turn amber at 70% and red at 90% (both set on its Readings page). On a plan without a 5-hour limit, such as a verified Ultra account, the week fills the card.
 
-How it gets the numbers: Claude Code passes its plan limits to its status line. The widget includes a status line script that shows model, folder, git branch, context and limits in Claude Code, and saves the two figures to ~/.cache/summit/claude-usage.json for the card. Nothing is fetched from the network and no credentials are read.
+How it gets the numbers: Claude Code passes its plan limits to its status line. The widget includes a status line script that shows model, folder, git branch, context and limits in Claude Code, and saves the figures to ~/.cache/summit/claude-usage.json for the card. Nothing is fetched from the network and no credentials are read.
 
 Setup: right-click the card › Configure › Setup, copy the snippet into ~/.claude/settings.json. Needs Claude Code and jq.
 

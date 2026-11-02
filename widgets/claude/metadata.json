@@ -13,7 +13,7 @@
         ],
         "BugReportUrl": "https://github.com/VicegerentPrince/summit-desktop/issues",
         "Category": "System Information",
-        "Description": "Your Claude plan's 5-hour and weekly limits, as Claude Code reports them, on a Liquid Glass card. Unofficial",
+        "Description": "Your Claude plan's weekly limit, and its 5-hour limit if it has one, as Claude Code reports them, on a Liquid Glass card. Unofficial",
         "EnabledByDefault": true,
         "Icon": "office-chart-ring",
         "Id": "summit.claude",

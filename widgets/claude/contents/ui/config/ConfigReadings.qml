@@ -15,7 +15,7 @@ ColumnLayout {
     SettingsGroup {
         SettingRow {
             title: "Warning colours"
-            hint: "Colour the figure and its bar as a limit gets close"
+            hint: "Colour the bar as a limit gets close"
             QQC2.Switch { checked: page.cfg_warnColours; onToggled: page.cfg_warnColours = checked }
         }
         Kirigami.Separator { Layout.fillWidth: true }

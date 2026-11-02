@@ -38,9 +38,10 @@ _welcome() {
   local info="$mu$date$rs" sep="  ${dim}·${rs}  "
   local -i used=$#date
   local usage=${XDG_CACHE_HOME:-$HOME/.cache}/summit/claude-usage.json json u=
-  if [[ -r $usage ]] && json=$(<$usage) && [[ $json == (#b)*'"five_hour":{"used":'([0-9.]##)',"resets_at":'([0-9]##)'},"seven_day":{"used":'([0-9.]##)',"resets_at":'([0-9]##)'}'* ]]; then
-    (( now < match[2] )) && u="${match[1]%.*}% of 5 h"
-    (( now < match[4] )) && u+="${u:+, }${match[3]%.*}% of week"
+  if [[ -r $usage ]] && json=$(<$usage); then
+    # each window on its own: a plan without a 5-hour limit has only the week
+    [[ $json == (#b)*'"five_hour":{"used":'([0-9.]##)',"resets_at":'([0-9]##)'}'* ]] && (( now < match[2] )) && u="${match[1]%.*}% of 5 h"
+    [[ $json == (#b)*'"seven_day":{"used":'([0-9.]##)',"resets_at":'([0-9]##)'}'* ]] && (( now < match[2] )) && u+="${u:+, }${match[1]%.*}% of week"
     [[ -n $u ]] && (( used + 12 + $#u <= width )) && info+="$sep${mu}Claude $u$rs"
   fi
 
