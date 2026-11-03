@@ -20,6 +20,7 @@ Item {
     property real insetRight: 0
     property bool strip: false             // one sideways row: columns is ignored
     property bool marksLow: false          // corner marks at the bottom: controls float over the top row
+    property Item markLayer: null          // draw the corner marks here instead: above refracting glass
     property real stripCellWidth: 170
     property real lift: 1.035
     // only what the screen can show, up to the size of a thumbnail
@@ -74,6 +75,8 @@ Item {
             height: grid.cellHeight - gallery.gap
             radius: gallery.radius
             lift: gallery.lift
+            markLayer: gallery.markLayer ? marks : null
+            markOrigin: Qt.point(grid.x + grid.contentItem.x, grid.y + grid.contentItem.y)
             decodeWidth: gallery.decodeWidth
             picture: gallery.app.thumbSet[fileBaseName] ? gallery.app.thumbs + fileBaseName + ".jpg" : fileUrl
             fallback: fileUrl    // a picture dropped in by hand has no thumbnail yet
@@ -96,6 +99,8 @@ Item {
             height: grid.cellHeight - gallery.gap
             radius: gallery.radius
             lift: gallery.lift
+            markLayer: gallery.markLayer ? marks : null
+            markOrigin: Qt.point(grid.x + grid.contentItem.x, grid.y + grid.contentItem.y)
             decodeWidth: 432
             marksLow: gallery.marksLow
             picture: thumb
@@ -109,6 +114,19 @@ Item {
     }
 
     clip: true
+
+    // the marks of this gallery outside it: same place, same fade, same clip
+    Item {
+        id: marks
+        parent: gallery.markLayer ? gallery.markLayer : gallery
+        x: gallery.markLayer ? gallery.x : 0
+        y: gallery.markLayer ? gallery.y : 0
+        width: gallery.width; height: gallery.height
+        opacity: gallery.markLayer ? gallery.opacity : 1
+        visible: gallery.visible
+        clip: true
+        z: 7
+    }
 
     GridView {
         id: grid
@@ -226,20 +244,28 @@ Item {
                 border.color: Kirigami.Theme.highlightColor
                 Behavior on border.color { ColorAnimation { duration: 500 * Kirigami.Units.longDuration / 200 } }
             }
-            Rectangle {
-                anchors.top: gallery.marksLow ? undefined : parent.top
-                anchors.bottom: gallery.marksLow ? parent.bottom : undefined
-                anchors.right: parent.right
-                anchors.margins: 8
-                width: 22; height: 22; radius: 11
-                color: Kirigami.Theme.highlightColor
-                Behavior on color { ColorAnimation { duration: 500 * Kirigami.Units.longDuration / 200 } }
-                Kirigami.Icon {
-                    anchors.centerIn: parent
-                    width: 13; height: 13
-                    source: "checkmark-symbolic"
-                    isMask: true
-                    color: Kirigami.Theme.highlightedTextColor
+            Item {   // its check, with the other marks
+                parent: gallery.markLayer ? marks : ring
+                x: gallery.markLayer ? grid.x + grid.contentItem.x + ring.x : 0
+                y: gallery.markLayer ? grid.y + grid.contentItem.y + ring.y : 0
+                width: ring.width; height: ring.height
+                visible: ring.visible
+                z: 8
+                Rectangle {
+                    anchors.top: gallery.marksLow ? undefined : parent.top
+                    anchors.bottom: gallery.marksLow ? parent.bottom : undefined
+                    anchors.right: parent.right
+                    anchors.margins: 8
+                    width: 22; height: 22; radius: 11
+                    color: Kirigami.Theme.highlightColor
+                    Behavior on color { ColorAnimation { duration: 500 * Kirigami.Units.longDuration / 200 } }
+                    Kirigami.Icon {
+                        anchors.centerIn: parent
+                        width: 13; height: 13
+                        source: "checkmark-symbolic"
+                        isMask: true
+                        color: Kirigami.Theme.highlightedTextColor
+                    }
                 }
             }
         }

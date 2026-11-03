@@ -15,6 +15,10 @@ Item {
     property bool isFocus: false
     property string badge: ""
     property bool marksLow: false          // the corner marks sit low, for when controls float over the top
+    // Where the corner marks are drawn. Under refracting glass they go to a layer above it, so the rim
+    // bends the picture but never the marks; markOrigin is this tile's parent in that layer's coordinates.
+    property Item markLayer: null
+    property point markOrigin: Qt.point(0, 0)
     property real lift: 1.035
     property int decodeWidth: 640
     signal chosen()
@@ -69,6 +73,27 @@ Item {
             function onIsBusyChanged() { if (image.status === Image.Ready) image.opacity = t.isBusy ? 0.55 : 1 }
         }
 
+        Rectangle {   // downloading
+            visible: t.isBusy
+            anchors.centerIn: parent
+            width: 44; height: 44; radius: 22
+            color: Qt.rgba(0, 0, 0, 0.45)
+            PlasmaComponents.BusyIndicator {
+                anchors.centerIn: parent
+                width: 28; height: 28
+                running: t.isBusy
+            }
+        }
+    }
+    Item {
+        id: marks
+        parent: t.markLayer ? t.markLayer : t
+        x: t.markLayer ? t.markOrigin.x + t.x : 0
+        y: t.markLayer ? t.markOrigin.y + t.y : 0
+        width: t.width; height: t.height
+        z: t.z
+        visible: t.visible
+        scale: face.scale
         Rectangle {   // size, while the pointer is on it
             visible: opacity > 0
             opacity: t.badge !== "" && hit.containsMouse ? 1 : 0
@@ -102,17 +127,6 @@ Item {
                 source: "checkmark-symbolic"
                 isMask: true
                 color: "white"
-            }
-        }
-        Rectangle {   // downloading
-            visible: t.isBusy
-            anchors.centerIn: parent
-            width: 44; height: 44; radius: 22
-            color: Qt.rgba(0, 0, 0, 0.45)
-            PlasmaComponents.BusyIndicator {
-                anchors.centerIn: parent
-                width: 28; height: 28
-                running: t.isBusy
             }
         }
     }

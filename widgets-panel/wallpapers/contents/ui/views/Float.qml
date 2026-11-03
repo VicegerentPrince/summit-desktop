@@ -71,6 +71,7 @@ FocusScope {
             radius: 4
             lift: 1.015
             marksLow: true
+            markLayer: marksAbove
             insetTop: 0; insetBottom: 76
             onMoved: y => v.scrolled(y)
         }
@@ -87,6 +88,7 @@ FocusScope {
             radius: 4
             lift: 1.015
             marksLow: true
+            markLayer: marksAbove
             insetTop: 0; insetBottom: 76
             onMoved: y => v.scrolled(y)
         }
@@ -113,6 +115,12 @@ FocusScope {
         anchors.fill: parent
         sourceItem: content
         tracking: v.morphing || tabs.moving || search.moving || bar.moving
+    }
+
+    // ---- the corner marks of the pictures, above the glass: its rim bends the pictures, not their marks
+    Item {
+        id: marksAbove
+        anchors.fill: parent
     }
 
     // ---- title, floating
