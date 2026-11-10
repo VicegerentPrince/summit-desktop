@@ -12,44 +12,44 @@ HERE=$(cd "$(dirname "$0")" && pwd)
 SRC=$HERE/home
 STAMP=$(date +%Y%m%d-%H%M%S)
 BACKUP=$HOME/.local/state/summit/backup-$STAMP
-say() { printf '%s\n' "$*"; }
+say()  { printf '%s\n' "$*"; }
 note() { printf '  %s\n' "$*"; }
-# plain_path REL: ~/REL is a real path under ~, with no symlinked file or folder on the way.
-# Installing through a link would write into wherever it points (a dotfiles repo, say), not into ~.
-plain_path() { [[ $(realpath -m -- "$HOME/$1") == "$(realpath -m -- "$HOME")/$1" ]]; }
-skip_linked() { note "skipped $1: $HOME/$1 is reached through a symlink (to $(realpath -m -- "$HOME/$1")); install it by hand if you want it"; }
+# A kitty.conf that does not include summit.conf is the user's own work: keep it (and the tab bar
+# script that goes with it) unless SUMMIT_REPLACE_KITTY=1. A missing or Summit-made one is replaced.
+kitty_is_ours() {
+  [[ ! -e $HOME/.config/kitty/kitty.conf ]] || grep -q '^include summit\.conf' "$HOME/.config/kitty/kitty.conf"
+}
 
 # dotfiles this setup owns: always brought to the stored version
 OWNED=(
-    .zshrc .zshenv .zprofile
-    .config/zsh/p10k.zsh .config/zsh/keys.md .config/zsh/ls_colors.zsh .config/zsh/welcome.zsh
-    .config/kitty/kitty.conf .config/kitty/summit.conf .config/kitty/tab_bar.py
-    .config/atuin/config.toml .config/atuin/themes/summit.toml
-    .config/fzf/fzfrc .config/fontconfig/fonts.conf .config/nvim/init.lua
-    .local/share/applications/kitty.desktop
+  .zshrc .zshenv .zprofile
+  .config/zsh/p10k.zsh .config/zsh/keys.md .config/zsh/ls_colors.zsh .config/zsh/welcome.zsh
+  .config/kitty/kitty.conf .config/kitty/summit.conf .config/kitty/tab_bar.py
+  .config/atuin/config.toml .config/atuin/themes/summit.toml
+  .config/fzf/fzfrc .config/fontconfig/fonts.conf .config/nvim/init.lua
+  .local/share/applications/kitty.desktop
 )
 # commands that live inside a widget (so the KDE Store widget carries its own copy): repo path -> home path
 TOOLS=(
-    "widgets-panel/wallpapers/contents/code/wall:.local/bin/wall"
-    "widgets/claude/contents/code/statusline.sh:.claude/statusline.sh"
+  "widgets-panel/wallpapers/contents/code/wall:.local/bin/wall"
+  "widgets/claude/contents/code/statusline.sh:.claude/statusline.sh"
 )
 # files you keep editing yourself: only created when missing
-SEED=(.config/mise/config.toml .config/Code/User/settings.json .config/Cursor/User/settings.json)
+SEED=( .config/mise/config.toml .config/Code/User/settings.json .config/Cursor/User/settings.json )
 
 if [[ ${1:-} == --save ]]; then
-    for f in "${OWNED[@]}" "${SEED[@]}"; do
-        [[ -e $HOME/$f ]] || continue
-        cmp -s "$HOME/$f" "$SRC/$f" 2> /dev/null && continue
-        install -D -m "$(stat -c %a "$HOME/$f")" "$HOME/$f" "$SRC/$f" && note "saved $f"
-    done
-    for t in "${TOOLS[@]}"; do
-        src=$HERE/${t%%:*} dst=$HOME/${t#*:}
-        [[ -e $dst ]] && ! cmp -s "$dst" "$src" && install -m 755 "$dst" "$src" && note "saved ${t#*:}"
-    done
-    mkdir -p "$SRC/.local/share/zsh/site-functions"
-    cp -u "$HOME"/.local/share/zsh/site-functions/_* "$SRC/.local/share/zsh/site-functions/" 2> /dev/null
-    say "saved."
-    exit 0
+  for f in "${OWNED[@]}" "${SEED[@]}"; do
+    [[ -e $HOME/$f ]] || continue
+    cmp -s "$HOME/$f" "$SRC/$f" 2>/dev/null && continue
+    install -D -m "$(stat -c %a "$HOME/$f")" "$HOME/$f" "$SRC/$f" && note "saved $f"
+  done
+  for t in "${TOOLS[@]}"; do
+    src=$HERE/${t%%:*} dst=$HOME/${t#*:}
+    [[ -e $dst ]] && ! cmp -s "$dst" "$src" && install -m 755 "$dst" "$src" && note "saved ${t#*:}"
+  done
+  mkdir -p "$SRC/.local/share/zsh/site-functions"
+  cp -u "$HOME"/.local/share/zsh/site-functions/_* "$SRC/.local/share/zsh/site-functions/" 2>/dev/null
+  say "saved."; exit 0
 fi
 
 say "0. look (colours, icons, cursor, fonts)"
@@ -61,39 +61,32 @@ bash "$HERE/fetch.sh" | sed 's/^/  /'
 say "2. dotfiles"
 changed=0
 for f in "${OWNED[@]}"; do
-    [[ -e $SRC/$f ]] || {
-        note "missing from this folder: $f"
-        continue
-    }
-    if cmp -s "$SRC/$f" "$HOME/$f" 2> /dev/null; then continue; fi
-    plain_path "$f" || {
-        skip_linked "$f"
-        continue
-    }
-    if [[ -e $HOME/$f ]]; then install -D -m 644 "$HOME/$f" "$BACKUP/$f"; fi
-    install -D -m "$(stat -c %a "$SRC/$f")" "$SRC/$f" "$HOME/$f" && note "installed $f" && changed=1
+  [[ -e $SRC/$f ]] || { note "missing from this folder: $f"; continue; }
+  if cmp -s "$SRC/$f" "$HOME/$f" 2>/dev/null; then continue; fi
+  case $f in .config/kitty/kitty.conf|.config/kitty/tab_bar.py)
+    [[ ${SUMMIT_REPLACE_KITTY:-} == 1 ]] || kitty_is_ours || {
+      note "kept your $f (not a Summit one; SUMMIT_REPLACE_KITTY=1 replaces it, a backup is kept)"; continue; } ;;
+  esac
+  if [[ -e $HOME/$f ]]; then install -D -m 644 "$HOME/$f" "$BACKUP/$f"; fi
+  install -D -m "$(stat -c %a "$SRC/$f")" "$SRC/$f" "$HOME/$f" && note "installed $f" && changed=1
 done
 for t in "${TOOLS[@]}"; do
-    src=$HERE/${t%%:*} dst=$HOME/${t#*:}
-    cmp -s "$src" "$dst" 2> /dev/null && continue
-    plain_path "${t#*:}" || {
-        skip_linked "${t#*:}"
-        continue
-    }
-    [[ -e $dst ]] && install -D -m 644 "$dst" "$BACKUP/${t#*:}"
-    install -D -m 755 "$src" "$dst" && note "installed ${t#*:}" && changed=1
+  src=$HERE/${t%%:*} dst=$HOME/${t#*:}
+  cmp -s "$src" "$dst" 2>/dev/null && continue
+  [[ -e $dst ]] && install -D -m 644 "$dst" "$BACKUP/${t#*:}"
+  install -D -m 755 "$src" "$dst" && note "installed ${t#*:}" && changed=1
 done
 for f in "${SEED[@]}"; do
-    [[ -e $HOME/$f || ! -e $SRC/$f ]] || ! plain_path "$f" || { install -D -m 644 "$SRC/$f" "$HOME/$f" && note "created $f" && changed=1; }
+  [[ -e $HOME/$f || ! -e $SRC/$f ]] || { install -D -m 644 "$SRC/$f" "$HOME/$f" && note "created $f" && changed=1; }
 done
 mkdir -p "$HOME/.local/share/zsh/site-functions"
-cp -n "$SRC"/.local/share/zsh/site-functions/_* "$HOME/.local/share/zsh/site-functions/" 2> /dev/null
-((changed)) || note "all up to date"
+cp -n "$SRC"/.local/share/zsh/site-functions/_* "$HOME/.local/share/zsh/site-functions/" 2>/dev/null
+(( changed )) || note "all up to date"
 [[ -d $BACKUP ]] && note "previous versions kept in $BACKUP"
 
 say "3. terminal definition for kitty (for programs that do not inherit it)"
 T=$HOME/.local/kitty.app/lib/kitty/terminfo/x/xterm-kitty
-if [[ -r $T ]]; then cmp -s "$T" "$HOME/.terminfo/x/xterm-kitty" 2> /dev/null || install -D -m 644 "$T" "$HOME/.terminfo/x/xterm-kitty"; fi
+if [[ -r $T ]]; then cmp -s "$T" "$HOME/.terminfo/x/xterm-kitty" 2>/dev/null || install -D -m 644 "$T" "$HOME/.terminfo/x/xterm-kitty"; fi
 
 say "4. tool configs and syntax themes"
 bash "$HERE/tools/install.sh" | sed 's/^/  /'
@@ -103,20 +96,16 @@ bash "$HERE/widgets/install.sh" 2>&1 | grep -E '^ *(ok|WARN|FAIL) +(summit\.|com
 
 say "6. editor theme (VS Code, Cursor)"
 for ed in code cursor; do
-    command -v $ed > /dev/null || continue
-    if $ed --list-extensions --show-versions 2> /dev/null | grep -qx 'summit.summit-theme@1.0.0'; then
-        note "$ed: already installed"
-    else $ed --install-extension "$HERE/vscode/summit-theme-1.0.0.vsix" --force 2> /dev/null | tail -1 | sed 's/^/  /'; fi
+  command -v $ed >/dev/null || continue
+  if $ed --list-extensions --show-versions 2>/dev/null | grep -qx 'summit.summit-theme@1.0.0'; then note "$ed: already installed"
+  else $ed --install-extension "$HERE/vscode/summit-theme-1.0.0.vsix" --force 2>/dev/null | tail -1 | sed 's/^/  /'; fi
 done
 
 say "7. desktop settings"
-kset() { # kset FILE KEY VALUE GROUP...   writes only when the value differs
-    local file=$1 key=$2 val=$3
-    shift 3
-    local -a g=()
-    for x in "$@"; do g+=(--group "$x"); done
-    [[ $(kreadconfig6 --file "$file" "${g[@]}" --key "$key" 2> /dev/null) == "$val" ]] && return 0
-    kwriteconfig6 --file "$file" "${g[@]}" --key "$key" "$val" && note "$file: $key = $val"
+kset() {  # kset FILE KEY VALUE GROUP...   writes only when the value differs
+  local file=$1 key=$2 val=$3; shift 3; local -a g=(); for x in "$@"; do g+=(--group "$x"); done
+  [[ $(kreadconfig6 --file "$file" "${g[@]}" --key "$key" 2>/dev/null) == "$val" ]] && return 0
+  kwriteconfig6 --file "$file" "${g[@]}" --key "$key" "$val" && note "$file: $key = $val"
 }
 kset kdeglobals TerminalApplication kitty General
 kset kdeglobals TerminalService kitty.desktop General
@@ -125,49 +114,45 @@ kset kwriterc "Auto Color Theme Selection" false "KTextEditor Renderer"
 kset kglobalshortcutsrc _launch none services org.kde.konsole.desktop
 # key_taken KEY: some other action in kglobalshortcutsrc already holds KEY (kitty's own entry does not count)
 key_taken() {
-    awk -v key="$1" '
+  awk -v key="$1" '
     /^\[/ { own = ($0 == "[services][kitty.desktop]"); next }
     !own && /=/ { v = substr($0, index($0, "=") + 1); sub(/,.*/, "", v)
                   n = split(v, k, /\\t/); for (i = 1; i <= n; i++) if (k[i] == key) { found = 1; exit } }
-    END { exit !found }' "${XDG_CONFIG_HOME:-$HOME/.config}/kglobalshortcutsrc" 2> /dev/null
+    END { exit !found }' "${XDG_CONFIG_HOME:-$HOME/.config}/kglobalshortcutsrc" 2>/dev/null
 }
 keys=()
 for k in Ctrl+Alt+T Meta+Return; do
-    if key_taken "$k"; then
-        note "kglobalshortcutsrc: $k already belongs to another action, not binding it to kitty"
-    else keys+=("$k"); fi
+  if key_taken "$k"; then note "kglobalshortcutsrc: $k already belongs to another action, not binding it to kitty"
+  else keys+=("$k"); fi
 done
-((${#keys[@]})) && kset kglobalshortcutsrc _launch "$(
-    IFS=$'\t'
-    printf '%s' "${keys[*]}"
-)" services kitty.desktop
-command -v flatpak > /dev/null && flatpak override --user --filesystem=xdg-config/gtk-3.0:ro --filesystem=xdg-config/gtk-4.0:ro
-fc-cache -f > /dev/null 2>&1
+(( ${#keys[@]} )) && kset kglobalshortcutsrc _launch "$(IFS=$'\t'; printf '%s' "${keys[*]}")" services kitty.desktop
+command -v flatpak >/dev/null && flatpak override --user --filesystem=xdg-config/gtk-3.0:ro --filesystem=xdg-config/gtk-4.0:ro
+fc-cache -f >/dev/null 2>&1
 
 # Plasma style "Summit Glass": only the see-through panel; Plasma takes everything else from the
 # stock style. Installed once (an installed style is left alone while it is in use).
 T=$HOME/.local/share/plasma/desktoptheme/summit-glass
 if [[ ! -d $T ]]; then
-    install -D -m 644 "$HERE/plasma-style/metadata.json" "$T/metadata.json" &&
-        install -D -m 644 "$HERE/plasma-style/panel-background.svgz" "$T/translucent/widgets/panel-background.svgz" &&
-        note "Plasma style Summit Glass installed"
+  install -D -m 644 "$HERE/plasma-style/metadata.json" "$T/metadata.json" \
+    && install -D -m 644 "$HERE/plasma-style/panel-background.svgz" "$T/translucent/widgets/panel-background.svgz" \
+    && note "Plasma style Summit Glass installed"
 fi
-[[ $(kreadconfig6 --file plasmarc --group Theme --key name) == summit-glass ]] || plasma-apply-desktoptheme summit-glass > /dev/null
+[[ $(kreadconfig6 --file plasmarc --group Theme --key name) == summit-glass ]] || plasma-apply-desktoptheme summit-glass >/dev/null
 
 say "8. first-time data"
 ATUIN=$HOME/.local/share/mise/installs/atuin/latest/.mise-bins/atuin
 if [[ -x $ATUIN && ! -e $HOME/.local/share/atuin/history.db && -s $HOME/.zsh_history ]]; then
-    ATUIN_SESSION=$("$ATUIN" uuid) HISTFILE=$HOME/.zsh_history "$ATUIN" import zsh 2>&1 | tail -1 | sed 's/^/  /'
+  ATUIN_SESSION=$("$ATUIN" uuid) HISTFILE=$HOME/.zsh_history "$ATUIN" import zsh 2>&1 | tail -1 | sed 's/^/  /'
 fi
 # the picture on the terminal's welcome card, drawn from the current wallpaper
-[[ -r $HOME/.cache/summit/welcome.png.kitty ]] || "$HOME/.local/bin/wall" card > /dev/null 2>&1
+[[ -r $HOME/.cache/summit/welcome.png.kitty ]] || "$HOME/.local/bin/wall" card >/dev/null 2>&1
 # accent colour from the wallpaper, for Plasma, kitty (kitty.conf includes accent.conf) and the zsh
 # prompt (.zshrc reads accent.zsh). Switched on once, on the first install; the Wallpapers widget's
 # setting or `wall accent off` turns it off.
 if [[ ! -d $HOME/.config/summit ]]; then
-    "$HOME/.local/bin/wall" accent on > /dev/null 2>&1 && note "accent colour follows the wallpaper"
+  "$HOME/.local/bin/wall" accent on >/dev/null 2>&1 && note "accent colour follows the wallpaper"
 fi
-[[ -r $HOME/.config/kitty/accent.conf && -r $HOME/.config/zsh/accent.zsh ]] || "$HOME/.local/bin/wall" accent now > /dev/null 2>&1
+[[ -r $HOME/.config/kitty/accent.conf && -r $HOME/.config/zsh/accent.zsh ]] || "$HOME/.local/bin/wall" accent now >/dev/null 2>&1
 TLDR=$HOME/.local/share/mise/installs/tealdeer/latest/tldr
 [[ -x $TLDR && ! -d $HOME/.cache/tealdeer/tldr-pages ]] && "$TLDR" --update 2>&1 | tail -1 | sed 's/^/  /'
 
@@ -175,15 +160,15 @@ say "9. screens (a panel on the second screen, colour range of HDMI monitors)"
 bash "$HERE/screens/apply-screens.sh" | sed 's/^/  /'
 
 if [[ ${1:-} == --layout ]]; then
-    say "10. desktop widget layout"
-    bash "$HERE/widgets/apply-layout.sh" | sed 's/^/  /'
+  say "10. desktop widget layout"
+  bash "$HERE/widgets/apply-layout.sh" | sed 's/^/  /'
 fi
 # keeps those places on a new monitor or scale; only on a desktop that uses this layout
 if [[ ${1:-} == --layout || -e $HOME/.config/systemd/user/summit-layout.service ]]; then
-    bash "$HERE/widgets/layout-watch.sh" | sed 's/^/  /'
+  bash "$HERE/widgets/layout-watch.sh" | sed 's/^/  /'
 fi
 
-cat << 'TXT'
+cat <<'TXT'
 
 Steps that need your password (once):
   chsh -s /usr/bin/zsh                   make zsh the login shell (kitty already starts zsh either way)
