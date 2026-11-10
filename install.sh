@@ -14,6 +14,11 @@ STAMP=$(date +%Y%m%d-%H%M%S)
 BACKUP=$HOME/.local/state/summit/backup-$STAMP
 say()  { printf '%s\n' "$*"; }
 note() { printf '  %s\n' "$*"; }
+# A kitty.conf that does not include summit.conf is the user's own work: keep it (and the tab bar
+# script that goes with it) unless SUMMIT_REPLACE_KITTY=1. A missing or Summit-made one is replaced.
+kitty_is_ours() {
+  [[ ! -e $HOME/.config/kitty/kitty.conf ]] || grep -q '^include summit\.conf' "$HOME/.config/kitty/kitty.conf"
+}
 
 # dotfiles this setup owns: always brought to the stored version
 OWNED=(
@@ -58,6 +63,10 @@ changed=0
 for f in "${OWNED[@]}"; do
   [[ -e $SRC/$f ]] || { note "missing from this folder: $f"; continue; }
   if cmp -s "$SRC/$f" "$HOME/$f" 2>/dev/null; then continue; fi
+  case $f in .config/kitty/kitty.conf|.config/kitty/tab_bar.py)
+    [[ ${SUMMIT_REPLACE_KITTY:-} == 1 ]] || kitty_is_ours || {
+      note "kept your $f (not a Summit one; SUMMIT_REPLACE_KITTY=1 replaces it, a backup is kept)"; continue; } ;;
+  esac
   if [[ -e $HOME/$f ]]; then install -D -m 644 "$HOME/$f" "$BACKUP/$f"; fi
   install -D -m "$(stat -c %a "$SRC/$f")" "$SRC/$f" "$HOME/$f" && note "installed $f" && changed=1
 done
@@ -102,8 +111,21 @@ kset kdeglobals TerminalApplication kitty General
 kset kdeglobals TerminalService kitty.desktop General
 kset kwriterc "Color Theme" Summit "KTextEditor Renderer"
 kset kwriterc "Auto Color Theme Selection" false "KTextEditor Renderer"
-kset kglobalshortcutsrc _launch $'Ctrl+Alt+T\tMeta+Return' services kitty.desktop
 kset kglobalshortcutsrc _launch none services org.kde.konsole.desktop
+# key_taken KEY: some other action in kglobalshortcutsrc already holds KEY (kitty's own entry does not count)
+key_taken() {
+  awk -v key="$1" '
+    /^\[/ { own = ($0 == "[services][kitty.desktop]"); next }
+    !own && /=/ { v = substr($0, index($0, "=") + 1); sub(/,.*/, "", v)
+                  n = split(v, k, /\\t/); for (i = 1; i <= n; i++) if (k[i] == key) { found = 1; exit } }
+    END { exit !found }' "${XDG_CONFIG_HOME:-$HOME/.config}/kglobalshortcutsrc" 2>/dev/null
+}
+keys=()
+for k in Ctrl+Alt+T Meta+Return; do
+  if key_taken "$k"; then note "kglobalshortcutsrc: $k already belongs to another action, not binding it to kitty"
+  else keys+=("$k"); fi
+done
+(( ${#keys[@]} )) && kset kglobalshortcutsrc _launch "$(IFS=$'\t'; printf '%s' "${keys[*]}")" services kitty.desktop
 command -v flatpak >/dev/null && flatpak override --user --filesystem=xdg-config/gtk-3.0:ro --filesystem=xdg-config/gtk-4.0:ro
 fc-cache -f >/dev/null 2>&1
 
